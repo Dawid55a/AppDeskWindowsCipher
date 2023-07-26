@@ -1,0 +1,116 @@
+<Window x:Class="CipherWpfApp.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wpf="clr-namespace:CipherLibrary.Wpf;assembly=CipherLibrary"
+        xmlns:viewModels="clr-namespace:CipherWpfApp.ViewModels"
+        Title="MainWindow" Height="450" Width="800">
+    <Window.DataContext>
+        <viewModels:MainViewModel />
+    </Window.DataContext>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="1*" />
+			<ColumnDefinition Width="50" />
+			<ColumnDefinition Width="1*" />
+		</Grid.ColumnDefinitions>
+
+		<!-- Górna część -->
+		<StackPanel Grid.Column="0" Grid.Row="0">
+			<Button Command="{Binding SelectFolderCommand}">Wybierz folder</Button>
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Label Content="Ścieżka:" />
+				<Border Grid.Column="1" BorderBrush="{x:Null}" Height="15">
+					<TextBlock  Text="{Binding FolderPath}" TextWrapping="Wrap" />
+				</Border>
+			</Grid>
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Label Grid.Column="0" Content="Hasło:"/>
+				<PasswordBox Grid.Column="1" Name="NetworkPassword"
+                             wpf:PasswordBoxAssistant.BindPassword="true"
+                             wpf:PasswordBoxAssistant.BoundPassword="{Binding Path=EncryptionPassword, Mode=TwoWay, 
+                                                             UpdateSourceTrigger=PropertyChanged}"/>
+
+			</Grid>
+		</StackPanel>
+
+		<DataGrid ItemsSource="{Binding LogEntries}" Grid.Column="2" Grid.Row="0" />
+
+		<!-- Dolna część -->
+		<Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="1*" />
+				<ColumnDefinition Width="50" />
+				<ColumnDefinition Width="1*" />
+			</Grid.ColumnDefinitions>
+
+			<!--Files decrypted and files to decrypt-->
+			<DataGrid Grid.Row="0" Grid.Column="0" ItemsSource="{Binding DecryptedFiles}"
+                      wpf:AttachedProperties.SelectedItems="{Binding SelectedDecryptedFiles, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      IsReadOnly="True"
+                      HorizontalAlignment="Stretch" AutoGenerateColumns="True" SelectionMode="Extended">
+
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="Name" Binding="{Binding Name}">
+						<DataGridTextColumn.CellStyle>
+							<Style TargetType="DataGridCell">
+								<Style.Triggers>
+									<DataTrigger Binding="{Binding IsEncrypted}" Value="True">
+										<Setter Property="Background" Value="LightBlue" />
+									</DataTrigger>
+									<DataTrigger Binding="{Binding ToBeDecrypted}" Value="True">
+										<Setter Property="Background" Value="Yellow" />
+									</DataTrigger>
+								</Style.Triggers>
+							</Style>
+						</DataGridTextColumn.CellStyle>
+					</DataGridTextColumn>
+					<!-- Jeżeli Twoje obiekty FileEntry mają więcej właściwości, które chcesz wyświetlić, dodaj więcej kolumn tutaj. -->
+				</DataGrid.Columns>
+			</DataGrid>
+
+			<!--Middle buttons-->
+			<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center">
+				<Button Command="{Binding MoveToEncryptCommand}">→</Button>
+				<Button Command="{Binding StartEncryptionCommand}">Start</Button>
+				<Button Command="{Binding MoveToDecryptCommand}">←</Button>
+			</StackPanel>
+
+			<!--Files encrypted and files to encrypt-->
+			<DataGrid Grid.Row="0" Grid.Column="2" ItemsSource="{Binding ToEncryptFiles}"
+                      wpf:AttachedProperties.SelectedItems="{Binding SelectedEncryptedFiles, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      IsReadOnly="True"
+                      HorizontalAlignment="Stretch" AutoGenerateColumns="True">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="Name" Binding="{Binding Name}">
+						<DataGridTextColumn.CellStyle>
+							<Style TargetType="DataGridCell">
+								<Style.Triggers>
+
+									<DataTrigger Binding="{Binding ToBeEncrypted}" Value="True">
+										<Setter Property="Background" Value="Yellow" />
+									</DataTrigger>
+								</Style.Triggers>
+							</Style>
+						</DataGridTextColumn.CellStyle>
+					</DataGridTextColumn>
+					<!-- Jeżeli Twoje obiekty FileEntry mają więcej właściwości, które chcesz wyświetlić, dodaj więcej kolumn tutaj. -->
+				</DataGrid.Columns>
+			</DataGrid>
+		</Grid>
+	</Grid>
+</Window>
