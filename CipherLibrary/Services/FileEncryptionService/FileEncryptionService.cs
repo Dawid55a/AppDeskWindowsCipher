@@ -96,36 +96,11 @@ namespace CipherLibrary.Services.FileEncryptionService
             File.Delete(sourceFile);
         }
 
-        public async void EncryptFiles(string[] files, string password)
+        public async Task EncryptFilesInQueueAsync(Queue<string> filesQueue, string password)
         {
-            foreach (var file in files)
+            while (filesQueue.Count > 0)
             {
-                var filePath = Path.Combine(_decryptedFilesPath, file);
-                if (!File.Exists(filePath)) throw new FileNotFoundException();
-
-                var info = new FileInfo(filePath);
-
-                // If size of file is above 100MB
-                if (info.Length >= 100 * 1024 * 1024)
-                {
-                    _bigFilesQueue.Enqueue(file);
-                }
-                else
-                {
-                    _smallFilesQueue.Enqueue(file);
-                }
-
-            }
-
-            await EncryptSmallFilesAsync(password).ConfigureAwait(true);
-            await EncryptLargeFilesAsync(password).ConfigureAwait(true);
-        }
-
-        public async Task EncryptSmallFilesAsync(string password)
-        {
-            while (_smallFilesQueue.Count > 0)
-            {
-                var file = _smallFilesQueue.Dequeue();
+                var file = filesQueue.Dequeue();
                 var filePath = Path.Combine(_decryptedFilesPath, file);
                 var destPath = Path.Combine(_encryptedFilesPath, file + ".enc");
                 await EncryptFileAsync(filePath, destPath, password).ConfigureAwait(true);
@@ -133,18 +108,19 @@ namespace CipherLibrary.Services.FileEncryptionService
             }
         }
 
-        public Task EncryptLargeFilesAsync(string password)
+        public Task EncryptFilesInParallelAsync(Queue<string> filesQueue, string password)
         {
-            var size = _bigFilesQueue.Count;
+            var size = filesQueue.Count;
             var encryptTasks = new Task[size];
             for (var i = 0; i < size; i++)
             {
-                var file = _bigFilesQueue.Dequeue();
+                var file = filesQueue.Dequeue();
                 var filePath = Path.Combine(_decryptedFilesPath, file);
                 var destPath = Path.Combine(_encryptedFilesPath, file + ".enc");
                 encryptTasks[i] = EncryptFileAsync(filePath, destPath, password);
                 EncryptedFiles.Add(file + ".enc");
             }
+
             return Task.WhenAll(encryptTasks);
         }
     }
