@@ -16,14 +16,13 @@ using CipherLibrary.Wcf.Contracts;
 
 namespace CipherConsoleService
 {
-    
     internal class Program
     {
         private static IContainer Container { get; set; }
         private static ServiceHost _serviceHost;
+
         public static void Main(string[] args)
         {
-
             var builder = new ContainerBuilder();
             builder.RegisterType<EventLoggerService>().As<IEventLoggerService>().SingleInstance();
             builder.RegisterType<FileCryptorService>().As<IFileCryptorService>().SingleInstance();
@@ -34,30 +33,58 @@ namespace CipherConsoleService
 
             Container = builder.Build();
 
-            using (var scope = Container.BeginLifetimeScope())
+
+            var binding = new BasicHttpBinding();
+
+            _serviceHost = new ServiceHost(typeof(CipherService), new Uri("http://localhost:8000"));
+            _serviceHost.AddServiceEndpoint(typeof(ICipherService), binding, "FileCipher");
+
+
+            var smb = _serviceHost.Description.Behaviors.Find<ServiceMetadataBehavior>();
+            if (smb == null)
             {
-                var service = scope.Resolve<IFileCryptorService>();
-                service.Setup();
-
-                var binding = new BasicHttpBinding();
-
-
-                _serviceHost = new ServiceHost(typeof(CipherService), new Uri("http://localhost:8000"));
-                _serviceHost.AddDependencyInjectionBehavior<ICipherService>(scope);
-
-                _serviceHost.AddServiceEndpoint(typeof(ICipherService), binding, "FileCipher");
-                var smb = new ServiceMetadataBehavior { HttpGetEnabled = true }; smb.HttpGetEnabled = true;
+                smb = new ServiceMetadataBehavior
+                {
+                    HttpGetEnabled = true
+                };
                 _serviceHost.Description.Behaviors.Add(smb);
-
-
-                _serviceHost.Opened += HostOnOpened;
-                _serviceHost.Open();
             }
+            else
+            {
+                if (!smb.HttpGetEnabled)
+                {
+                    smb.HttpGetEnabled = true;
+                }
+            }
+
+
+            var debug = _serviceHost.Description.Behaviors.Find<ServiceDebugBehavior>();
+            if (debug == null)
+            {
+                _serviceHost.Description.Behaviors.Add(
+                    new ServiceDebugBehavior() {IncludeExceptionDetailInFaults = true});
+            }
+            else
+            {
+                if (!debug.IncludeExceptionDetailInFaults)
+                {
+                    debug.IncludeExceptionDetailInFaults = true;
+                }
+            }
+
+            _serviceHost.AddDependencyInjectionBehavior<ICipherService>(Container);
+
+
+            _serviceHost.Opened += HostOnOpened;
+            _serviceHost.Open();
+
 
 
             Console.ReadLine();
             _serviceHost.Close();
         }
+
+
         private static void HostOnOpened(object sender, EventArgs e)
         {
             Console.WriteLine("Message service started");

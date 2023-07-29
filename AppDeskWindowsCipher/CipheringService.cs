@@ -21,8 +21,8 @@ namespace AppDeskWindowsCipher
 
         protected override void OnStart(string[] args)
         {
-            _host = new ServiceHost(typeof(CipherWcfService.CipherService));
-            _host.Open();
+            // _host = new ServiceHost(typeof(CipherWcfService.CipherService));
+            // _host.Open();
         }
 
         protected override void OnStop()

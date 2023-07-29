@@ -1,29 +1,27 @@
-﻿using CipherWpfApp.Models;
+﻿using CipherLibrary.Wcf.Contracts;
+using CipherLibrary.Wpf;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows.Input;
-using System.Windows.Forms;
-using CipherLibrary.Wpf;
-using System.Windows;
-using System.Collections;
-using System.Collections.Specialized;
-using System.Configuration;
 using System;
-using System.Collections.Generic;
+using System.Collections;
+using System.Configuration;
 using System.Linq;
-using System.ServiceModel;
-using Autofac;
-using Autofac.Integration.Wcf;
-using CipherLibrary.Wcf.Contracts;
+using System.Windows.Forms;
+using CipherLibrary.Services.EventLoggerService;
+using CipherWpfApp.Models;
 
-namespace CipherWpfApp.ViewModels
+namespace WpfApp.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public class MainAppViewModel
     {
         private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
         private Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
         private readonly ICipherService _cipherService;
+        private readonly IEventLoggerService _eventLoggerService;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -79,9 +77,10 @@ namespace CipherWpfApp.ViewModels
                 OnPropertyChanged(nameof(SelectedEncryptedFiles));
             }
         }
-        public MainViewModel(ICipherService cipherService)
+        public MainAppViewModel(ICipherService cipherService, IEventLoggerService eventLoggerService)
         {
             _cipherService = cipherService;
+            _eventLoggerService = eventLoggerService;
 
             DecryptedFiles = new ObservableCollection<FileEntry>();
             ToEncryptFiles = new ObservableCollection<FileEntry>();
@@ -103,8 +102,8 @@ namespace CipherWpfApp.ViewModels
 
 
 
-            ToEncryptFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File1.txt", Name = "File1.txt", IsEncrypted = true, IsDecrypted = false});
-            ToEncryptFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File2.txt", Name = "File2.txt", IsEncrypted = true, IsDecrypted = false});
+            ToEncryptFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File1.txt", Name = "File1.txt", IsEncrypted = true, IsDecrypted = false });
+            ToEncryptFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File2.txt", Name = "File2.txt", IsEncrypted = true, IsDecrypted = false });
             ToEncryptFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File3.txt", Name = "File3.txt", IsEncrypted = true, IsDecrypted = false });
 
             //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true});
@@ -112,9 +111,9 @@ namespace CipherWpfApp.ViewModels
             //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true });
             //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true });
 
-            
+
         }
-        
+
         private void SelectFolder(object obj)
         {
             var dialog = new FolderBrowserDialog
@@ -206,7 +205,11 @@ namespace CipherWpfApp.ViewModels
             //{
             //    //_cipherService.DecryptFile(file.Path, EncryptionPassword);
             //}
-            foreach (var file in _cipherService.GetEncryptedFiles())
+            Console.WriteLine(_cipherService);
+            _eventLoggerService.WriteInfo("Sss");
+            var files = _cipherService.GetEncryptedFiles();
+            Console.WriteLine("Start Encryption");
+            foreach (var file in files)
             {
                 DecryptedFiles.Add(file);
             }
@@ -217,5 +220,4 @@ namespace CipherWpfApp.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
-
 }

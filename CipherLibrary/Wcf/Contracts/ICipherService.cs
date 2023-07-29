@@ -16,5 +16,7 @@ namespace CipherLibrary.Wcf.Contracts
         void EncryptFiles(List<FileEntry> fileEntry);
         [OperationContract]
         void DecryptFiles(List<FileEntry> fileEntry);
+        [OperationContract]
+        string Test(string text);
     }
 }

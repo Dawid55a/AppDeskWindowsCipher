@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9D4E2C77-F9BE-4460-B47C-82FF2B9B2F20}</ProjectGuid>
+    <ProjectGuid>{C4FDA200-D534-4319-8A8F-8D4434A1BE12}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>CipherWpfApp</RootNamespace>
-    <AssemblyName>CipherWpfApp</AssemblyName>
+    <RootNamespace>WpfApp</RootNamespace>
+    <AssemblyName>WpfApp</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -41,15 +41,6 @@
     <Reference Include="Autofac.Integration.Wcf, Version=6.1.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
       <HintPath>..\packages\Autofac.Wcf.6.1.0\lib\net472\Autofac.Integration.Wcf.dll</HintPath>
     </Reference>
-    <Reference Include="HeBianGu.Base.WpfBase, Version=4.0.10.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\HeBianGu.Base.WpfBase.4.0.10\lib\net472\HeBianGu.Base.WpfBase.dll</HintPath>
-    </Reference>
-    <Reference Include="HeBianGu.General.WpfControlLib, Version=4.0.10.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\HeBianGu.General.WpfControlLib.4.0.10\lib\net472\HeBianGu.General.WpfControlLib.dll</HintPath>
-    </Reference>
-    <Reference Include="HeBianGu.Service.Animation, Version=4.0.10.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\HeBianGu.Service.Animation.4.0.10\lib\net472\HeBianGu.Service.Animation.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.1.1.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
@@ -57,17 +48,10 @@
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
-    <Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ComponentModel.Annotations.5.0.0\lib\net461\System.ComponentModel.Annotations.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Diagnostics.DiagnosticSource.4.7.1\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Drawing.Common, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Drawing.Common.6.0.0\lib\net461\System.Drawing.Common.dll</HintPath>
     </Reference>
     <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
@@ -104,21 +88,29 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="ViewModels\MainViewModel.cs" />
+    <Compile Include="Models\LogEntry.cs" />
+    <Compile Include="ViewModels\MainAppViewModel.cs" />
+    <Compile Include="Views\MainAppView.xaml.cs">
+      <DependentUpon>MainAppView.xaml</DependentUpon>
+    </Compile>
+    <Page Include="Views\MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Views\MainWindow.xaml.cs" />
-    <Page Include="Views\MainViewModel.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\MainWindow.xaml">
+    <Compile Include="Views\MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="Views\MainAppView.xaml">
+      <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Models\LogEntry.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -146,16 +138,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Commands\" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\CipherLibrary\CipherLibrary.csproj">
-      <Project>{06FA9356-B1D7-4AF6-911D-FC898215E37D}</Project>
+      <Project>{06fa9356-b1d7-4af6-911d-fc898215e37d}</Project>
       <Name>CipherLibrary</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Connected Services\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Resources\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

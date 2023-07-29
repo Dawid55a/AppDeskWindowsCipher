@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CipherWpfApp.Properties
+namespace WpfApp.Properties
 {
 
 
