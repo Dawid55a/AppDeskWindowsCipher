@@ -1,49 +1,55 @@
 ﻿using System;
-using CipherWpfApp.Models;
 using System.Collections.Generic;
-using CipherLibrary.Services.FileEncryptionService;
+using System.Diagnostics;
+using CipherLibrary.Services.EventLoggerService;
+using CipherLibrary.Services.FileCryptorService;
 
 namespace CipherLibrary.Wcf.Contracts
 {
     public class CipherService: ICipherService
     {
+        private readonly IFileCryptorService _fileCryptorService;
+        private readonly IEventLoggerService _eventLoggerService;
 
-        public CipherService()
+        public CipherService(IFileCryptorService fileCryptorService, IEventLoggerService eventLoggerService)
         {
+            _fileCryptorService = fileCryptorService;
+            _eventLoggerService = eventLoggerService;
         }
 
         public List<FileEntry> GetEncryptedFiles()
         {
-            Console.WriteLine("GetEncryptedFiles started");
-            var fileEntries = new List<FileEntry>
-            {
-                new FileEntry { Path = "C:\\Path\\To\\File1.txt", Name = "File1.txt", IsEncrypted = true, IsDecrypted = false }
-            };
-
-            return  fileEntries;
+            _eventLoggerService.WriteDebug("Pobrano zaszyfrowane pliki");
+            return _fileCryptorService.GetEncryptedFiles();
         }
 
         public List<FileEntry> GetDecryptedFiles()
         {
-            throw new System.NotImplementedException();
+            _eventLoggerService.WriteDebug("Pobrano odszyfrowane pliki");
+            return _fileCryptorService.GetDecryptedFiles();
         }
 
-        public void EncryptFiles(List<FileEntry> fileEntry)
+        public void EncryptFiles(List<FileEntry> fileEntry, byte[] password)
         {
-            throw new System.NotImplementedException();
+            _fileCryptorService.EncryptFiles(fileEntry, password);
+            _eventLoggerService.WriteDebug("Zaszyfrowano pliki");
         }
 
-        public void DecryptFiles(List<FileEntry> fileEntry)
+        public void DecryptFiles(List<FileEntry> fileEntry, byte[] password)
         {
-            throw new System.NotImplementedException();
+            _fileCryptorService.DecryptFiles(fileEntry, password);
+            _eventLoggerService.WriteDebug("Odszyfrowano pliki");
         }
 
-        public string Test(string text)
+        public void SetTraceLevel(TraceLevel level)
         {
-            Console.WriteLine("Uruchomiono test");
-            return text+" ualosie";
+            _eventLoggerService.WriteDebug($"Ustawiono poziom logowania na {level}");
+            _fileCryptorService.SetTraceLevel(level);
         }
 
-
+        public string GetPublicKey()
+        {
+            return _fileCryptorService.GetPublicKey();
+        }
     }
 }

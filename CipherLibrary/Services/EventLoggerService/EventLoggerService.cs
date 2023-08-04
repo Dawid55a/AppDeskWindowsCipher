@@ -66,6 +66,11 @@ namespace CipherLibrary.Services.EventLoggerService
             }
         }
 
+        public TraceLevel GetTraceLevel()
+        {
+            return _traceSwitch.Level;
+        }
+
         public void ClearEntries()
         {
             _log.Clear();

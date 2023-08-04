@@ -10,6 +10,7 @@ namespace CipherLibrary.Services.EventLoggerService
         void WriteError(string message);
         void WriteWarning(string message);
         void SetTraceLevel(TraceLevel level);
+        TraceLevel GetTraceLevel();
         void ClearEntries();
     }
 }

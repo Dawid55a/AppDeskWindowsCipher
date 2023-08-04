@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using CipherWpfApp.Models;
 using System.ServiceModel;
 
@@ -12,11 +13,17 @@ namespace CipherLibrary.Wcf.Contracts
         List<FileEntry> GetEncryptedFiles();
         [OperationContract]
         List<FileEntry> GetDecryptedFiles();
+
         [OperationContract]
-        void EncryptFiles(List<FileEntry> fileEntry);
+        void EncryptFiles(List<FileEntry> fileEntry, byte[] password);
+
         [OperationContract]
-        void DecryptFiles(List<FileEntry> fileEntry);
+        void DecryptFiles(List<FileEntry> fileEntry, byte[] password);
+
         [OperationContract]
-        string Test(string text);
+        void SetTraceLevel(TraceLevel level);
+
+        [OperationContract]
+        string GetPublicKey();
     }
 }
