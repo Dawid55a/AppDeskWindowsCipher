@@ -24,8 +24,8 @@ namespace CipherLibrary.Services.FileDecryptionService
             _eventLoggerService = eventLoggerService;
             if (_allAppSettings["WorkFolder"] == "") throw new ArgumentException("WorkFolder is empty");
             var workDirectoryPath = _allAppSettings["WorkFolder"];
-            _encryptedFilesPath = Path.Combine(workDirectoryPath, "Encrypted");
-            _decryptedFilesPath = Path.Combine(workDirectoryPath, "Decrypted");
+            _encryptedFilesPath = Path.Combine(workDirectoryPath, "EncryptedFiles");
+            _decryptedFilesPath = Path.Combine(workDirectoryPath, "DecryptedFiles");
         }
 
         public async Task DecryptFileAsync(string sourceFile, string destFile, string password)

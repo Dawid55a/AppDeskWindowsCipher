@@ -46,6 +46,8 @@ namespace CipherLibrary.Services.FileCryptorService
 
             _encryptedFilesPath = _allAppSettings["WorkFolder"] + "\\EncryptedFiles";
             _decryptedFilesPath = _allAppSettings["WorkFolder"] + "\\DecryptedFiles";
+
+            Setup();
         }
 
         public void Setup()
@@ -115,6 +117,13 @@ namespace CipherLibrary.Services.FileCryptorService
         public List<FileEntry> GetDecryptedFiles()
         {
             var files = _fileDecryptListeningService.GetFiles();
+
+            // write to console each file
+            foreach (var file in files)
+            {
+                Console.WriteLine(file);
+            }
+
             var fileEntries = files.ConvertAll(x => new FileEntry
             {
                 Name = Path.GetFileName(x),
@@ -128,11 +137,10 @@ namespace CipherLibrary.Services.FileCryptorService
 
         public void EncryptFiles(List<FileEntry> fileEntries, byte[] password)
         {
-            _eventLoggerService.WriteDebug($"EncryptFiles started {DateTime.Now}");
-            Console.WriteLine("EncryptFiles started");
-
             foreach (var fileEntry in fileEntries)
             {
+                _eventLoggerService.WriteDebug($"EncryptFiles started on {fileEntry.Name} {DateTime.Now}");
+                Console.WriteLine($"EncryptFiles started on {fileEntry.Name} {DateTime.Now}");
                 var path = Path.Combine(_encryptedFilesPath, fileEntry.Path);
                 if (!File.Exists(path)) throw new FileNotFoundException();
                 var info = new FileInfo(path);
@@ -163,11 +171,11 @@ namespace CipherLibrary.Services.FileCryptorService
 
         public void DecryptFiles(List<FileEntry> fileEntries, byte[] password)
         {
-            _eventLoggerService.WriteDebug($"DecryptFiles started {DateTime.Now}");
-            Console.WriteLine("DecryptFiles started");
-
             foreach (var fileEntry in fileEntries)
             {
+                _eventLoggerService.WriteDebug($"DecryptFiles started on {fileEntry.Name} {DateTime.Now}");
+                Console.WriteLine($"DecryptFiles started on {fileEntry.Name} {DateTime.Now}");
+
                 var path = Path.Combine(_decryptedFilesPath, fileEntry.Path);
                 if (!File.Exists(path)) throw new FileNotFoundException();
                 var info = new FileInfo(path);

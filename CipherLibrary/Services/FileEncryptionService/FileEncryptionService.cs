@@ -29,8 +29,8 @@ namespace CipherLibrary.Services.FileEncryptionService
 
             if (_allAppSettings["WorkFolder"] == "") throw new ArgumentException("WorkFolder is empty");
             _workDirectoryPath = _allAppSettings["WorkFolder"];
-            _encryptedFilesPath = Path.Combine(_workDirectoryPath, "Encrypted");
-            _decryptedFilesPath = Path.Combine(_workDirectoryPath, "Decrypted");
+            _encryptedFilesPath = Path.Combine(_workDirectoryPath, "EncryptedFiles");
+            _decryptedFilesPath = Path.Combine(_workDirectoryPath, "DecryptedFiles");
         }
 
         /// <summary>
@@ -102,9 +102,9 @@ namespace CipherLibrary.Services.FileEncryptionService
             {
                 var file = filesQueue.Dequeue();
                 var filePath = Path.Combine(_decryptedFilesPath, file);
-                var destPath = Path.Combine(_encryptedFilesPath, file + ".enc");
+                var destPath = Path.Combine(_encryptedFilesPath, file);
                 await EncryptFileAsync(filePath, destPath, password).ConfigureAwait(true);
-                EncryptedFiles.Add(file + ".enc");
+                EncryptedFiles.Add(file);
             }
         }
 
@@ -116,9 +116,9 @@ namespace CipherLibrary.Services.FileEncryptionService
             {
                 var file = filesQueue.Dequeue();
                 var filePath = Path.Combine(_decryptedFilesPath, file);
-                var destPath = Path.Combine(_encryptedFilesPath, file + ".enc");
+                var destPath = Path.Combine(_encryptedFilesPath, file);
                 encryptTasks[i] = EncryptFileAsync(filePath, destPath, password);
-                EncryptedFiles.Add(file + ".enc");
+                EncryptedFiles.Add(file);
             }
 
             return Task.WhenAll(encryptTasks);
