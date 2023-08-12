@@ -13,7 +13,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
-            <b:InvokeCommandAction Command="{Binding FirstStartupCommand}"/>
+            <b:InvokeCommandAction Command="{Binding OnLoadedCommand}"/>
         </b:EventTrigger>
     </b:Interaction.Triggers>
     <Grid>
@@ -146,13 +146,16 @@
             <!--Middle buttons-->
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center"
                         HorizontalAlignment="Center">
-                <Button Command="{Binding MoveToEncryptCommand}">→</Button>
-                <Button Command="{Binding StartEncryptionCommand}">Start</Button>
-                <Button Command="{Binding MoveToDecryptCommand}">←</Button>
+                <Button Command="{Binding RefreshDataCommand}" IsEnabled="{Binding CryptButtonEnabled}" Margin="0,0,0,4">
+                    <Image Source="/Resources/refresh-icon.png" Width="16" Height="16"  Margin="0,0,0,4"/>
+                </Button>
+                <Button Command="{Binding MoveToEncryptCommand}" IsEnabled="{Binding CryptButtonEnabled}" Margin="0,0,0,4">→</Button>
+                <Button Command="{Binding StartEncryptionCommand}" IsEnabled="{Binding CryptButtonEnabled}" Margin="0,0,0,4">Start</Button>
+                <Button Command="{Binding MoveToDecryptCommand}" IsEnabled="{Binding CryptButtonEnabled}" Margin="0,0,0,4">←</Button>
             </StackPanel>
 
             <!--Files encrypted and files to encrypt-->
-            <DataGrid Grid.Row="0" Grid.Column="2" ItemsSource="{Binding ToEncryptFiles}"
+            <DataGrid Grid.Row="0" Grid.Column="2" ItemsSource="{Binding EncrypedFiles}"
                       wpf:AttachedProperties.SelectedItems="{Binding SelectedEncryptedFiles, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       IsReadOnly="True"
                       HorizontalAlignment="Stretch" AutoGenerateColumns="True">
