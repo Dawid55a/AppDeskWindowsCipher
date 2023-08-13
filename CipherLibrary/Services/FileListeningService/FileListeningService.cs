@@ -16,6 +16,9 @@ namespace CipherLibrary.Services.FileListeningService
 
         public void StartListenOnFolder(string path)
         {
+
+            _files.Clear();
+
             _watcher = new FileSystemWatcher
             {
                 Path = path,

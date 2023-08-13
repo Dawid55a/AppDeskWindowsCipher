@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using WpfApp.ViewModels;
 
 namespace WpfApp.Views
 {
@@ -22,6 +23,11 @@ namespace WpfApp.Views
         public PasswordDialog()
         {
             InitializeComponent();
+            var viewModel = new PasswordDialogViewModel
+            {
+                CloseAction = new Action(this.Close)
+            };
+            DataContext = viewModel;
         }
     }
 }
