@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.Linq;
 using System.ServiceModel;
 using System.ServiceModel.Description;
@@ -20,9 +22,17 @@ namespace CipherConsoleService
     {
         private static IContainer Container { get; set; }
         private static ServiceHost _serviceHost;
-
+        private static readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
+        private static Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         public static void Main(string[] args)
         {
+
+            if (_allAppSettings["WorkFolder"] == "")
+            {
+                _allAppSettings.Set("WorkFolder", Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+                _config.Save(ConfigurationSaveMode.Modified);
+            }
+
             var builder = new ContainerBuilder();
             builder.RegisterType<EventLoggerService>().As<IEventLoggerService>().SingleInstance();
             builder.RegisterType<FileCryptorService>().As<IFileCryptorService>().SingleInstance();
@@ -77,8 +87,6 @@ namespace CipherConsoleService
 
             _serviceHost.Opened += HostOnOpened;
             _serviceHost.Open();
-
-
 
             Console.ReadLine();
             _serviceHost.Close();
