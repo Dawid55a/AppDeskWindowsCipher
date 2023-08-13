@@ -25,5 +25,8 @@ namespace CipherLibrary.Wcf.Contracts
 
         [OperationContract]
         string GetPublicKey();
+
+        [OperationContract]
+        void ChangeOperationDirectory(string directoryPath);
     }
 }

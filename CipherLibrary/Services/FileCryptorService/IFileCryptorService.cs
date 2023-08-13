@@ -14,5 +14,6 @@ namespace CipherLibrary.Services.FileCryptorService
         List<FileEntry> GetEncryptedFiles();
         void SetTraceLevel(TraceLevel level);
         string GetPublicKey();
+        void SetWorkingDirectory(string workingDirectory);
     }
 }

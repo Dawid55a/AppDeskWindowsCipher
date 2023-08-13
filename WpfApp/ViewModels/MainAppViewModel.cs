@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System;
 using System.Collections;
 using System.Configuration;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using CipherLibrary.Services.EventLoggerService;
@@ -17,6 +18,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using WpfApp.Views;
+using System.Windows.Threading;
 
 namespace WpfApp.ViewModels
 {
@@ -27,12 +29,15 @@ namespace WpfApp.ViewModels
 
         private readonly ICipherService _cipherService;
         private readonly IEventLoggerService _eventLoggerService;
-
+        private DispatcherTimer _eventLogTimer;
+        private readonly EventLog _eventLog;
+        private bool _cryptButtonEnabled;
+        private DateTime _lastEventLogEntryTime;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public ObservableCollection<FileEntry> DecryptedFiles { get; set; }
         public ObservableCollection<FileEntry> EncrypedFiles { get; set; }
-        public ObservableCollection<LogEntry> LogEntries { get; set; }
+        public ObservableCollection<EventLogEntry> LogEntries { get; set; }
 
         public ICommand SelectFolderCommand { get; set; }
         public ICommand MoveToEncryptCommand { get; set; }
@@ -42,6 +47,7 @@ namespace WpfApp.ViewModels
         public ICommand TogglePopupCommand { get; set; }
         public ICommand OnLoadedCommand { get; set; }
         public ICommand RefreshDataCommand { get; set; }
+        public ICommand ClearLogCommand { get; set; }
 
         private string _publicKey;
 
@@ -130,7 +136,7 @@ namespace WpfApp.ViewModels
             }
         }
 
-        private bool _cryptButtonEnabled;
+
         public bool CryptButtonEnabled
         {
             get => _cryptButtonEnabled;
@@ -146,10 +152,11 @@ namespace WpfApp.ViewModels
         {
             _cipherService = cipherService;
             _eventLoggerService = eventLoggerService;
+            _eventLog = new EventLog(_allAppSettings["LogName"], Environment.MachineName, _allAppSettings["SourceName"]);
 
             DecryptedFiles = new ObservableCollection<FileEntry>();
             EncrypedFiles = new ObservableCollection<FileEntry>();
-            LogEntries = new ObservableCollection<LogEntry>();
+            LogEntries = new ObservableCollection<EventLogEntry>();
             SelectedDecryptedFiles = new ObservableCollection<FileEntry>();
             SelectedEncryptedFiles = new ObservableCollection<FileEntry>();
 
@@ -162,6 +169,7 @@ namespace WpfApp.ViewModels
             TogglePopupCommand = new RelayCommand(TogglePopup);
             OnLoadedCommand = new RelayCommand(OnLoaded);
             RefreshDataCommand = new RelayCommand(RefreshData);
+            ClearLogCommand = new RelayCommand(ClearLog);
 
             // Initialize working directory
             _allAppSettings.Set("WorkFolder", Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
@@ -182,7 +190,35 @@ namespace WpfApp.ViewModels
             LogLevel = _eventLoggerService.GetTraceLevel().ToString();
 
             CryptButtonEnabled = true;
+
+            StartEventLogTimer();
         }
+
+        private void ClearLog(object obj)
+        {
+            _eventLog.Clear();
+            LogEntries.Clear();
+        }
+
+        private void StartEventLogTimer()
+        {
+            _eventLogTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(5)
+            };
+            _eventLogTimer.Tick += FetchEventLogEntries;
+            _eventLogTimer.Start();
+        }
+        private void FetchEventLogEntries(object sender, EventArgs e)
+        {
+            _eventLog.Entries.Cast<EventLogEntry>().ToList().ForEach(x =>
+            {
+                if (x.TimeGenerated <= _lastEventLogEntryTime) return;
+                LogEntries.Add(x);
+                _lastEventLogEntryTime = x.TimeGenerated;
+            });
+        }
+
 
         private void RefreshData(object obj)
         {
@@ -252,9 +288,11 @@ namespace WpfApp.ViewModels
                 //_allAppSettings.Set("WorkFolder", dialog.SelectedPath);
                 //workDirPath.Text = _allAppSettings.Get("WorkFolder");
             }
-
+            _cipherService.ChangeOperationDirectory(FolderPath);
+            _allAppSettings.Set("WorkFolder", FolderPath);
             //_client.SetWorkingDirectory(_allAppSettings.Get("WorkFolder"));
             //_config.Save(ConfigurationSaveMode.Modified);
+            RefreshData(null);
         }
 
         private void MoveToEncrypt(object obj)
@@ -282,9 +320,6 @@ namespace WpfApp.ViewModels
                 // Clear the selected items
                 SelectedDecryptedFiles.Clear();
             }
-
-
-
         }
 
         private void MoveToDecrypt(object obj)

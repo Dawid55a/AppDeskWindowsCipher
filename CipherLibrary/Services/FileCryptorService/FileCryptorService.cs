@@ -30,8 +30,8 @@ namespace CipherLibrary.Services.FileCryptorService
         private readonly Queue<string> _smallFilesToEncrypt = new Queue<string>();
         private readonly Queue<string> _smallFilesToDecrypt = new Queue<string>();
 
-        private readonly string _encryptedFilesPath;
-        private readonly string _decryptedFilesPath;
+        private string _encryptedFilesPath;
+        private string _decryptedFilesPath;
         private byte[] _password;
 
         public FileCryptorService(IFileEncryptionService fileEncryptionService,
@@ -67,11 +67,46 @@ namespace CipherLibrary.Services.FileCryptorService
                 _config.Save(ConfigurationSaveMode.Modified);
             }
 
-            if (_allAppSettings["WorkFolder"] != "")
+            if (_allAppSettings["WorkFolder"] == "")
             {
-                _fileEncryptListeningService.StartListenOnFolder(_encryptedFilesPath);
-                _fileDecryptListeningService.StartListenOnFolder(_decryptedFilesPath);
+                _allAppSettings.Set("WorkFolder", Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+                _config.Save(ConfigurationSaveMode.Modified);
             }
+
+            // Create folders if not exist
+            if (!Directory.Exists(_encryptedFilesPath))
+            {
+                Directory.CreateDirectory(_encryptedFilesPath);
+            }
+
+            if (!Directory.Exists(_decryptedFilesPath))
+            {
+                Directory.CreateDirectory(_decryptedFilesPath);
+            }
+
+            _fileEncryptListeningService.StartListenOnFolder(_encryptedFilesPath);
+            _fileDecryptListeningService.StartListenOnFolder(_decryptedFilesPath);
+        }
+
+        public void SetWorkingDirectory(string workingDirectory)
+        {
+            _allAppSettings.Set("WorkFolder", workingDirectory);
+            _encryptedFilesPath = workingDirectory + "\\EncryptedFiles";
+            _decryptedFilesPath = workingDirectory + "\\DecryptedFiles";
+            _config.Save(ConfigurationSaveMode.Modified);
+
+            if (!Directory.Exists(_encryptedFilesPath))
+            {
+                Directory.CreateDirectory(_encryptedFilesPath);
+            }
+
+            if (!Directory.Exists(_decryptedFilesPath))
+            {
+                Directory.CreateDirectory(_decryptedFilesPath);
+            }
+
+            _fileEncryptListeningService.StartListenOnFolder(_encryptedFilesPath);
+            _fileDecryptListeningService.StartListenOnFolder(_decryptedFilesPath);
         }
 
         public void SetPassword(byte[] encryptedPassword)

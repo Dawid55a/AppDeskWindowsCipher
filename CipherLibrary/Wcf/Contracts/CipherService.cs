@@ -51,5 +51,11 @@ namespace CipherLibrary.Wcf.Contracts
         {
             return _fileCryptorService.GetPublicKey();
         }
+
+        public void ChangeOperationDirectory(string directoryPath)
+        {
+            _eventLoggerService.WriteInfo($"Zmieniono głowny katalog na {directoryPath}");
+            _fileCryptorService.SetWorkingDirectory(directoryPath);
+        }
     }
 }
