@@ -15,10 +15,12 @@ using CipherLibrary.Services.EventLoggerService;
 using CipherWpfApp.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using WpfApp.Views;
 using System.Windows.Threading;
+using CipherLibrary.DTOs;
 
 namespace WpfApp.ViewModels
 {
@@ -36,7 +38,7 @@ namespace WpfApp.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         public ObservableCollection<FileEntry> DecryptedFiles { get; set; }
-        public ObservableCollection<FileEntry> EncrypedFiles { get; set; }
+        public ObservableCollection<FileEntry> EncryptedFiles { get; set; }
         public ObservableCollection<EventLogEntry> LogEntries { get; set; }
 
         public ICommand SelectFolderCommand { get; set; }
@@ -50,7 +52,6 @@ namespace WpfApp.ViewModels
         public ICommand ClearLogCommand { get; set; }
 
         private string _publicKey;
-
 
         private string _folderPath;
         public string FolderPath
@@ -152,10 +153,10 @@ namespace WpfApp.ViewModels
         {
             _cipherService = cipherService;
             _eventLoggerService = eventLoggerService;
-            _eventLog = new EventLog(_allAppSettings["LogName"], Environment.MachineName, _allAppSettings["SourceName"]);
+            _eventLog = new EventLog(_allAppSettings[AppConfigKeys.LogName], Environment.MachineName, _allAppSettings[AppConfigKeys.SourceName]);
 
             DecryptedFiles = new ObservableCollection<FileEntry>();
-            EncrypedFiles = new ObservableCollection<FileEntry>();
+            EncryptedFiles = new ObservableCollection<FileEntry>();
             LogEntries = new ObservableCollection<EventLogEntry>();
             SelectedDecryptedFiles = new ObservableCollection<FileEntry>();
             SelectedEncryptedFiles = new ObservableCollection<FileEntry>();
@@ -172,15 +173,15 @@ namespace WpfApp.ViewModels
             ClearLogCommand = new RelayCommand(ClearLog);
 
             // Initialize working directory
-            _allAppSettings.Set("WorkFolder", Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+            _allAppSettings.Set(AppConfigKeys.WorkFolder, Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
             _config.Save(ConfigurationSaveMode.Modified);
 
-            FolderPath = _allAppSettings.Get("WorkFolder");
+            FolderPath = _allAppSettings.Get(AppConfigKeys.WorkFolder);
 
 
-            // EncrypedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File1.txt", Name = "File1.txt", IsEncrypted = true, IsDecrypted = false });
-            // EncrypedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File2.txt", Name = "File2.txt", IsEncrypted = true, IsDecrypted = false });
-            // EncrypedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File3.txt", Name = "File3.txt", IsEncrypted = true, IsDecrypted = false });
+            // EncryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File1.txt", Name = "File1.txt", IsEncrypted = true, IsDecrypted = false });
+            // EncryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File2.txt", Name = "File2.txt", IsEncrypted = true, IsDecrypted = false });
+            // EncryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File3.txt", Name = "File3.txt", IsEncrypted = true, IsDecrypted = false });
 
             //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true});
             //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true});
@@ -223,7 +224,7 @@ namespace WpfApp.ViewModels
         private void RefreshData(object obj)
         {
             DecryptedFiles.Clear();
-            EncrypedFiles.Clear();
+            EncryptedFiles.Clear();
 
             foreach (var file in _cipherService.GetDecryptedFiles())
             {
@@ -232,7 +233,7 @@ namespace WpfApp.ViewModels
 
             foreach (var file in _cipherService.GetEncryptedFiles())
             {
-                EncrypedFiles.Add(file);
+                EncryptedFiles.Add(file);
             }
 
             CryptButtonEnabled = true;
@@ -240,12 +241,11 @@ namespace WpfApp.ViewModels
 
         private void OnLoaded(object obj)
         {
-            // on first startup
-            if (_allAppSettings.Get("FirstStartup") == "YES")
+            // On first startup
+            if (_allAppSettings.Get(AppConfigKeys.FirstStartup) == "YES")
             {
-                // TODO: Otrzymać publickey z serwisu
-                // _publicKey = _cipherService.GetPublicKey();
-            
+                _publicKey = _cipherService.GetPublicKey();
+
                 var passwordDialog = new PasswordDialog();
             
                 // This will freeze the app until the dialog is closed
@@ -253,15 +253,24 @@ namespace WpfApp.ViewModels
                 if (res == false)
                 {
                     EncryptionPassword = passwordDialog.PasswordFirst.Password;
-                    // TODO: Use the password
+                    byte[] encryptedPassword;
+                    using (var rsaPublicOnly = new RSACryptoServiceProvider())
+                    {
+                        rsaPublicOnly.FromXmlString(_publicKey);
+                        encryptedPassword = rsaPublicOnly.Encrypt( Encoding.Default.GetBytes(EncryptionPassword), true);
+                    }
+                    _allAppSettings.Set(AppConfigKeys.EncryptedPassword, Encoding.Default.GetString(encryptedPassword,0,encryptedPassword.Length));
+                    _cipherService.SetPassword(encryptedPassword);
+
                 }
-                
-                _allAppSettings.Set("FirstStartup", "NO");
+
+                _allAppSettings.Set(AppConfigKeys.FirstStartup, "NO");
                 _config.Save(ConfigurationSaveMode.Modified);
+
+
             }
 
-            _publicKey = _cipherService.GetPublicKey();
-
+            
             foreach (var file in _cipherService.GetDecryptedFiles())
             {
                 DecryptedFiles.Add(file);
@@ -269,7 +278,7 @@ namespace WpfApp.ViewModels
 
             foreach (var file in _cipherService.GetEncryptedFiles())
             {
-                EncrypedFiles.Add(file);
+                EncryptedFiles.Add(file);
             }
 
         }
@@ -289,7 +298,7 @@ namespace WpfApp.ViewModels
                 //workDirPath.Text = _allAppSettings.Get("WorkFolder");
             }
             _cipherService.ChangeOperationDirectory(FolderPath);
-            _allAppSettings.Set("WorkFolder", FolderPath);
+            _allAppSettings.Set(AppConfigKeys.WorkFolder, FolderPath);
             //_client.SetWorkingDirectory(_allAppSettings.Get("WorkFolder"));
             //_config.Save(ConfigurationSaveMode.Modified);
             RefreshData(null);
@@ -314,7 +323,7 @@ namespace WpfApp.ViewModels
                     {
                         file.ToBeEncrypted = true;
                     }
-                    EncrypedFiles.Add(file);
+                    EncryptedFiles.Add(file);
                 }
 
                 // Clear the selected items
@@ -330,7 +339,7 @@ namespace WpfApp.ViewModels
                 var selectedFiles = new List<FileEntry>(SelectedEncryptedFiles.Cast<FileEntry>());
                 foreach (FileEntry file in selectedFiles)
                 {
-                    EncrypedFiles.Remove(file);
+                    EncryptedFiles.Remove(file);
                     if (file.IsEncrypted)
                     {
                         file.ToBeDecrypted = true;
@@ -361,34 +370,36 @@ namespace WpfApp.ViewModels
                 }
 
                 // Encrypt password with public key
+
                 byte[] encryptedPassword;
                 using (var rsaPublicOnly = new RSACryptoServiceProvider())
                 {
                     rsaPublicOnly.FromXmlString(_publicKey);
-                    encryptedPassword = rsaPublicOnly.Encrypt(Encoding.UTF8.GetBytes(EncryptionPassword), true);
+                    encryptedPassword = rsaPublicOnly.Encrypt( Encoding.Default.GetBytes(EncryptionPassword), true);
                 }
 
-                // Encrypt and decrypt files
-                await Task.Run(() => _cipherService.EncryptFiles(EncrypedFiles.ToList(), encryptedPassword)).ConfigureAwait(true);
-                await Task.Run(() => _cipherService.DecryptFiles(DecryptedFiles.ToList(), encryptedPassword)).ConfigureAwait(true);
+                _cipherService.CheckPassword(encryptedPassword);
+                
+
+                if (_cipherService.CheckPassword(encryptedPassword))
+                {
+                    // Encrypt and decrypt files
+                    await Task.Run(() => _cipherService.DecryptFiles(DecryptedFiles.ToList(), encryptedPassword))
+                        .ConfigureAwait(true);
+                    await Task.Run(() => _cipherService.EncryptFiles(EncryptedFiles.ToList(), encryptedPassword))
+                        .ConfigureAwait(true);
+                }
+                else
+                {
+                    _eventLoggerService.WriteError("Wpisano nieprawidłowe hasło!");
+                    throw new Exception("Hasło jest nie prawidłowe");
+                }
             }
             finally
             {
-
-                DecryptedFiles.Clear();
-                EncrypedFiles.Clear();
-
-                foreach (var file in _cipherService.GetDecryptedFiles())
-                {
-                    DecryptedFiles.Add(file);
-                }
-
-                foreach (var file in _cipherService.GetEncryptedFiles())
-                {
-                    EncrypedFiles.Add(file);
-                }
-
-                CryptButtonEnabled = true;
+                // Giving some time for file watcher tu update changes
+                Thread.Sleep(50);
+                RefreshData(null);
             }
         }
         private void SetLogLevel(object parameter)

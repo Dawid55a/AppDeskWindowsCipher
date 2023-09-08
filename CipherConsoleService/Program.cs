@@ -14,6 +14,7 @@ using CipherLibrary.Services.FileCryptorService;
 using CipherLibrary.Services.FileDecryptionService;
 using CipherLibrary.Services.FileEncryptionService;
 using CipherLibrary.Services.FileListeningService;
+using CipherLibrary.Services.PasswordService;
 using CipherLibrary.Wcf.Contracts;
 
 namespace CipherConsoleService
@@ -39,6 +40,7 @@ namespace CipherConsoleService
             builder.RegisterType<FileEncryptionService>().As<IFileEncryptionService>();
             builder.RegisterType<FileDecryptionService>().As<IFileDecryptionService>();
             builder.RegisterType<FileListeningService>().As<IFileListeningService>();
+            builder.RegisterType<PasswordService>().As<IPasswordService>();
             builder.RegisterType<CipherService>().As<ICipherService>();
 
             Container = builder.Build();

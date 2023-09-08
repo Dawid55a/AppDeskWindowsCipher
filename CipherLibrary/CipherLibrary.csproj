@@ -84,6 +84,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DTOs\AppConfigKeys.cs" />
     <Compile Include="DTOs\ListBoxFilesDto.cs" />
     <Compile Include="Helpers\PasswordValidator.cs" />
     <Compile Include="Models\LogEntry.cs" />
@@ -100,6 +101,8 @@
     <Compile Include="Services\FileListeningService\IFileListeningService.cs" />
     <Compile Include="Services\FileWatcherService\FileWatcherService.cs" />
     <Compile Include="Services\FileWatcherService\IFileWatcherService.cs" />
+    <Compile Include="Services\PasswordService\IPasswordService.cs" />
+    <Compile Include="Services\PasswordService\PasswordService.cs" />
     <Compile Include="Wcf\Contracts\CipherService.cs" />
     <Compile Include="Wcf\Contracts\FileEntry.cs" />
     <Compile Include="Wcf\Contracts\ICipherService.cs" />

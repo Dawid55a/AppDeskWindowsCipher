@@ -178,7 +178,7 @@
             </StackPanel>
 
             <!--Files encrypted and files to encrypt-->
-            <DataGrid Grid.Row="0" Grid.Column="2" ItemsSource="{Binding EncrypedFiles}"
+            <DataGrid Grid.Row="0" Grid.Column="2" ItemsSource="{Binding EncryptedFiles}"
                       wpf:AttachedProperties.SelectedItems="{Binding SelectedEncryptedFiles, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       IsReadOnly="True"
                       HorizontalAlignment="Stretch" AutoGenerateColumns="True">

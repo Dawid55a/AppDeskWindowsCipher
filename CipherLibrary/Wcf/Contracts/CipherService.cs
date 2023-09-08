@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using CipherLibrary.Services.EventLoggerService;
 using CipherLibrary.Services.FileCryptorService;
+using CipherLibrary.Services.PasswordService;
 
 namespace CipherLibrary.Wcf.Contracts
 {
@@ -10,11 +11,13 @@ namespace CipherLibrary.Wcf.Contracts
     {
         private readonly IFileCryptorService _fileCryptorService;
         private readonly IEventLoggerService _eventLoggerService;
+        private readonly IPasswordService _passwordService;
 
-        public CipherService(IFileCryptorService fileCryptorService, IEventLoggerService eventLoggerService)
+        public CipherService(IFileCryptorService fileCryptorService, IEventLoggerService eventLoggerService, IPasswordService passwordService)
         {
             _fileCryptorService = fileCryptorService;
             _eventLoggerService = eventLoggerService;
+            _passwordService = passwordService;
         }
 
         public List<FileEntry> GetEncryptedFiles()
@@ -56,6 +59,18 @@ namespace CipherLibrary.Wcf.Contracts
         {
             _eventLoggerService.WriteInfo($"Zmieniono głowny katalog na {directoryPath}");
             _fileCryptorService.SetWorkingDirectory(directoryPath);
+        }
+
+        public bool CheckPassword(byte[] password)
+        {
+            _eventLoggerService.WriteDebug("Sprawdzanie hasła podanego przez użytkownika");
+            return _passwordService.IsPasswordCorrect(password);
+        }
+
+        public void SetPassword(byte[] password)
+        {
+            _eventLoggerService.WriteDebug("Ustawianie hasła");
+            _passwordService.SetPassword(password);
         }
     }
 }

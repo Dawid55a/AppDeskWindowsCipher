@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.IO.Compression;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using CipherLibrary.DTOs;
@@ -28,20 +30,22 @@ namespace CipherLibrary.Services.PasswordService
 
         public void SetPassword(byte[] password)
         {
-            _allAppSettings[AppConfigKeys.EncryptedPassword] = Encoding.UTF8.GetString(password);
+            Console.WriteLine(Encoding.Default.GetString(password));
+            _allAppSettings[AppConfigKeys.EncryptedPassword] = Encoding.Default.GetString(password);
         }
 
         public string GetPassword()
         {
-            return DecryptPassword(Encoding.UTF8.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
+            return DecryptPassword(Encoding.Default.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
         }
 
-        private string DecryptPassword(byte[] password)
+
+        public string DecryptPassword(byte[] password)
         {
             byte[] decryptedPassword;
             using (var rsaPublicOnly = new RSACryptoServiceProvider())
             {
-                rsaPublicOnly.FromXmlString(_allAppSettings["PrivateKey"]);
+                rsaPublicOnly.FromXmlString(_allAppSettings[AppConfigKeys.PrivateKey]);
                 decryptedPassword = rsaPublicOnly.Decrypt(password, true);
             }
 
@@ -58,9 +62,9 @@ namespace CipherLibrary.Services.PasswordService
             _eventLoggerService.WriteDebug("CheckPassword started");
             Console.WriteLine("CheckPassword started");
 
-            var passedPassword = DecryptPassword(Encoding.UTF8.GetBytes(password));
+            var passedPassword = DecryptPassword(Encoding.Default.GetBytes(password));
             var savedPassword =
-                DecryptPassword(Encoding.UTF8.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
+                DecryptPassword(Encoding.Default.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
 
             return string.Equals(passedPassword, savedPassword);
         }
@@ -72,7 +76,7 @@ namespace CipherLibrary.Services.PasswordService
 
             var passedPassword = DecryptPassword(password);
             var savedPassword =
-                DecryptPassword(Encoding.UTF8.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
+                DecryptPassword(Encoding.Default.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
 
             return string.Equals(passedPassword, savedPassword);
         }

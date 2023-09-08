@@ -7,7 +7,6 @@ namespace CipherLibrary.Services.FileCryptorService
     public interface IFileCryptorService
     {
         void Setup();
-        void SetPassword(byte[] encryptedPassword);
         void EncryptFiles(List<FileEntry> fileEntries, byte[] password);
         void DecryptFiles(List<FileEntry> fileEntries, byte[] password);
         List<FileEntry> GetDecryptedFiles();

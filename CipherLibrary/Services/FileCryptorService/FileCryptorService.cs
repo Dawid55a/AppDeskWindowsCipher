@@ -6,10 +6,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using CipherLibrary.DTOs;
 using CipherLibrary.Services.EventLoggerService;
 using CipherLibrary.Services.FileDecryptionService;
 using CipherLibrary.Services.FileEncryptionService;
 using CipherLibrary.Services.FileListeningService;
+using CipherLibrary.Services.PasswordService;
 using CipherLibrary.Wcf.Contracts;
 
 namespace CipherLibrary.Services.FileCryptorService
@@ -20,6 +22,7 @@ namespace CipherLibrary.Services.FileCryptorService
         private readonly IFileDecryptionService _fileDecryptionService;
         private readonly IFileListeningService _fileEncryptListeningService;
         private readonly IFileListeningService _fileDecryptListeningService;
+        private readonly IPasswordService _passwordService;
         private readonly IEventLoggerService _eventLoggerService;
 
         private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
@@ -34,18 +37,24 @@ namespace CipherLibrary.Services.FileCryptorService
         private string _decryptedFilesPath;
         private byte[] _password;
 
-        public FileCryptorService(IFileEncryptionService fileEncryptionService,
-            IFileDecryptionService fileDecryptionService, IEventLoggerService eventLoggerService,
-            IFileListeningService fileEncryptListeningService, IFileListeningService fileDecryptListeningService)
+        public FileCryptorService(
+            IFileEncryptionService fileEncryptionService,
+            IFileDecryptionService fileDecryptionService,
+            IEventLoggerService eventLoggerService,
+            IFileListeningService fileEncryptListeningService,
+            IFileListeningService fileDecryptListeningService,
+            IPasswordService passwordService
+        )
         {
             _fileEncryptionService = fileEncryptionService;
             _fileDecryptionService = fileDecryptionService;
             _eventLoggerService = eventLoggerService;
             _fileEncryptListeningService = fileEncryptListeningService;
             _fileDecryptListeningService = fileDecryptListeningService;
+            _passwordService = passwordService;
 
-            _encryptedFilesPath = _allAppSettings["WorkFolder"] + "\\EncryptedFiles";
-            _decryptedFilesPath = _allAppSettings["WorkFolder"] + "\\DecryptedFiles";
+            _encryptedFilesPath = _allAppSettings[AppConfigKeys.WorkFolder] + "\\EncryptedFiles";
+            _decryptedFilesPath = _allAppSettings[AppConfigKeys.WorkFolder] + "\\DecryptedFiles";
 
             Setup();
         }
@@ -55,21 +64,24 @@ namespace CipherLibrary.Services.FileCryptorService
             _eventLoggerService.WriteInfo("FileCryptorService setup");
             Console.WriteLine("FileCryptorService setup");
 
-            if (_allAppSettings["PublicKey"] == "" || _allAppSettings["PrivateKey"] == "")
+            if (string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.PublicKey]) ||
+                string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.PrivateKey]))
             {
                 // Create encryption key
+                Console.WriteLine("Start creating key");
                 using (var rsa = new RSACryptoServiceProvider(4096))
                 {
-                    _allAppSettings.Set("PublicKey", rsa.ToXmlString(false));
-                    _allAppSettings.Set("PrivateKey", rsa.ToXmlString(true));
+                    _allAppSettings.Set(AppConfigKeys.PublicKey, rsa.ToXmlString(false));
+                    _allAppSettings.Set(AppConfigKeys.PrivateKey, rsa.ToXmlString(true));
                 }
+                Console.WriteLine("End creating key");
 
                 _config.Save(ConfigurationSaveMode.Modified);
             }
 
-            if (_allAppSettings["WorkFolder"] == "")
+            if (string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.WorkFolder]))
             {
-                _allAppSettings.Set("WorkFolder", Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+                _allAppSettings.Set(AppConfigKeys.WorkFolder, Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
                 _config.Save(ConfigurationSaveMode.Modified);
             }
 
@@ -90,7 +102,7 @@ namespace CipherLibrary.Services.FileCryptorService
 
         public void SetWorkingDirectory(string workingDirectory)
         {
-            _allAppSettings.Set("WorkFolder", workingDirectory);
+            _allAppSettings.Set(AppConfigKeys.WorkFolder, workingDirectory);
             _encryptedFilesPath = workingDirectory + "\\EncryptedFiles";
             _decryptedFilesPath = workingDirectory + "\\DecryptedFiles";
             _config.Save(ConfigurationSaveMode.Modified);
@@ -109,22 +121,6 @@ namespace CipherLibrary.Services.FileCryptorService
             _fileDecryptListeningService.StartListenOnFolder(_decryptedFilesPath);
         }
 
-        public void SetPassword(byte[] encryptedPassword)
-        {
-            _password = encryptedPassword;
-        }
-
-        private string DecryptPassword(byte[] password)
-        {
-            byte[] decryptedPassword;
-            using (var rsaPublicOnly = new RSACryptoServiceProvider())
-            {
-                rsaPublicOnly.FromXmlString(_allAppSettings["PrivateKey"]);
-                decryptedPassword = rsaPublicOnly.Decrypt(password, true);
-            }
-
-            return Encoding.Default.GetString(decryptedPassword);
-        }
         public List<FileEntry> GetEncryptedFiles()
         {
             var files = _fileEncryptListeningService.GetFiles();
@@ -146,7 +142,7 @@ namespace CipherLibrary.Services.FileCryptorService
 
         public string GetPublicKey()
         {
-            return _allAppSettings.Get("PublicKey");
+            return _allAppSettings.Get(AppConfigKeys.PublicKey);
         }
 
         public List<FileEntry> GetDecryptedFiles()
@@ -198,7 +194,7 @@ namespace CipherLibrary.Services.FileCryptorService
                 }
             }
 
-            var plainPassword = DecryptPassword(password);
+            var plainPassword = _passwordService.DecryptPassword(password);
 
             _fileEncryptionService.EncryptFilesInQueueAsync(_smallFilesToEncrypt, plainPassword);
             _fileEncryptionService.EncryptFilesInParallelAsync(_bigFilesToEncrypt, plainPassword);
@@ -233,11 +229,10 @@ namespace CipherLibrary.Services.FileCryptorService
                 }
             }
 
-            var plainPassword = DecryptPassword(password);
+            var plainPassword = _passwordService.DecryptPassword(password);
 
             _fileDecryptionService.DecryptFilesInQueueAsync(_smallFilesToDecrypt, plainPassword);
             _fileDecryptionService.DecryptFilesInParallelAsync(_bigFilesToDecrypt, plainPassword);
         }
-
     }
 }

@@ -28,5 +28,11 @@ namespace CipherLibrary.Wcf.Contracts
 
         [OperationContract]
         void ChangeOperationDirectory(string directoryPath);
+
+        [OperationContract]
+        bool CheckPassword(byte[] password);
+
+        [OperationContract]
+        void SetPassword(byte[] password);
     }
 }

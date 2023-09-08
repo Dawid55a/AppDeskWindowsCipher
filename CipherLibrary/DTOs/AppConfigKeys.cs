@@ -8,5 +8,6 @@
         public static readonly string SourceName = "SourceName";
         public static readonly string LogName = "LogName";
         public static readonly string EncryptedPassword = "EncryptedPassword";
+        public static readonly string FirstStartup = "FirstStartup";
     }
 }
