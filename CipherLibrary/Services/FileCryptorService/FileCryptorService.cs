@@ -35,7 +35,6 @@ namespace CipherLibrary.Services.FileCryptorService
 
         private string _encryptedFilesPath;
         private string _decryptedFilesPath;
-        private byte[] _password;
 
         public FileCryptorService(
             IFileEncryptionService fileEncryptionService,
@@ -172,9 +171,9 @@ namespace CipherLibrary.Services.FileCryptorService
             {
                 _eventLoggerService.WriteDebug($"EncryptFiles started on {fileEntry.Name} {DateTime.Now}");
                 Console.WriteLine($"EncryptFiles started on {fileEntry.Name} {DateTime.Now}");
-                var path = Path.Combine(_encryptedFilesPath, fileEntry.Path);
-                if (!File.Exists(path)) throw new FileNotFoundException();
-                var info = new FileInfo(path);
+
+                if (!File.Exists(fileEntry.Path)) throw new FileNotFoundException();
+                var info = new FileInfo(fileEntry.Path);
 
                 if (fileEntry.IsEncrypted)
                 {
@@ -207,9 +206,8 @@ namespace CipherLibrary.Services.FileCryptorService
                 _eventLoggerService.WriteDebug($"DecryptFiles started on {fileEntry.Name} {DateTime.Now}");
                 Console.WriteLine($"DecryptFiles started on {fileEntry.Name} {DateTime.Now}");
 
-                var path = Path.Combine(_decryptedFilesPath, fileEntry.Path);
-                if (!File.Exists(path)) throw new FileNotFoundException();
-                var info = new FileInfo(path);
+                if (!File.Exists(fileEntry.Path)) throw new FileNotFoundException();
+                var info = new FileInfo(fileEntry.Path);
 
                 if (fileEntry.IsDecrypted)
                 {

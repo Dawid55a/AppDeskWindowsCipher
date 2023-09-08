@@ -4,35 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CipherLibrary.Services.EventLoggerService;
-using CipherLibrary.Services.FileWatcherService;
-using System.Collections.Specialized;
-using System.Configuration;
-using System.Windows.Shapes;
-using Path = System.IO.Path;
 
 namespace CipherLibrary.Services.FileEncryptionService
 {
     public class FileEncryptionService : IFileEncryptionService
     {
-        private IEventLoggerService _eventLoggerService;
-
-        private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
-        private Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-        private readonly string _decryptedFilesPath;
-        private readonly string _encryptedFilesPath;
-        private readonly string _workDirectoryPath;
-        private readonly Queue<string> _bigFilesQueue = new Queue<string>();
-        private readonly Queue<string> _smallFilesQueue = new Queue<string>();
-        public List<string> EncryptedFiles = new List<string>();
+        private readonly IEventLoggerService _eventLoggerService;
 
         public FileEncryptionService(IEventLoggerService eventLoggerService)
         {
             _eventLoggerService = eventLoggerService;
-
-            if (_allAppSettings["WorkFolder"] == "") throw new ArgumentException("WorkFolder is empty");
-            _workDirectoryPath = _allAppSettings["WorkFolder"];
-            _encryptedFilesPath = Path.Combine(_workDirectoryPath, "EncryptedFiles");
-            _decryptedFilesPath = Path.Combine(_workDirectoryPath, "DecryptedFiles");
         }
 
         /// <summary>
@@ -59,42 +40,52 @@ namespace CipherLibrary.Services.FileEncryptionService
                 rng.GetBytes(salt);
             }
 
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt, 10000))
+            try
             {
-                byte[] key = deriveBytes.GetBytes(16);
-
-                // Open the original file
-                using (var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read))
+                using (var deriveBytes = new Rfc2898DeriveBytes(password, salt, 10000))
                 {
-                    // Create a new encrypted file
-                    using (var destinationStream = new FileStream(destFile, FileMode.Create, FileAccess.Write))
+                    byte[] key = deriveBytes.GetBytes(16);
+
+                    // Open the original file
+                    using (var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read))
                     {
-                        // Write the salt to the beginning of the encrypted file
-                        await destinationStream.WriteAsync(salt, 0, salt.Length).ConfigureAwait(true);
-
-                        // Create an instance of Aes
-                        using (var aes = Aes.Create())
+                        // Create a new encrypted file
+                        using (var destinationStream = new FileStream(destFile, FileMode.Create, FileAccess.Write))
                         {
-                            aes.Key = key;
-                            aes.GenerateIV();
+                            // Write the salt to the beginning of the encrypted file
+                            await destinationStream.WriteAsync(salt, 0, salt.Length).ConfigureAwait(true);
 
-                            // Write the IV to the encrypted file
-                            await destinationStream.WriteAsync(aes.IV, 0, aes.IV.Length).ConfigureAwait(true);
-
-                            // Create an encryptor from the Aes instance
-                            ICryptoTransform encryptor = aes.CreateEncryptor();
-
-                            // Create an encrypting stream
-                            using (var cryptoStream = new CryptoStream(destinationStream, encryptor, CryptoStreamMode.Write))
+                            // Create an instance of Aes
+                            using (var aes = Aes.Create())
                             {
-                                // Copy the contents of the original file to the encrypted file asynchronously
-                                await sourceStream.CopyToAsync(cryptoStream).ConfigureAwait(true);
+                                aes.Key = key;
+                                aes.GenerateIV();
+
+                                // Write the IV to the encrypted file
+                                await destinationStream.WriteAsync(aes.IV, 0, aes.IV.Length).ConfigureAwait(true);
+
+                                // Create an encryptor from the Aes instance
+                                ICryptoTransform encryptor = aes.CreateEncryptor();
+
+                                // Create an encrypting stream
+                                using (var cryptoStream =
+                                       new CryptoStream(destinationStream, encryptor, CryptoStreamMode.Write))
+                                {
+                                    // Copy the contents of the original file to the encrypted file asynchronously
+                                    await sourceStream.CopyToAsync(cryptoStream).ConfigureAwait(true);
+                                }
                             }
                         }
                     }
                 }
             }
-            Console.WriteLine($"Encrypted file {sourceFile}");
+            catch (Exception e)
+            {
+                _eventLoggerService.WriteError(e.Message);
+                throw;
+            }
+
+            _eventLoggerService.WriteDebug($"Encrypted file {sourceFile}");
             File.Delete(sourceFile);
         }
 
@@ -111,7 +102,6 @@ namespace CipherLibrary.Services.FileEncryptionService
                 var newDirectoryPath = Path.Combine(rootPath, "EncryptedFiles");
                 var destPath = Path.Combine(newDirectoryPath, fileName);
                 await EncryptFileAsync(fullFilePath, destPath, password).ConfigureAwait(true);
-                EncryptedFiles.Add(fullFilePath);
             }
         }
 
@@ -130,7 +120,6 @@ namespace CipherLibrary.Services.FileEncryptionService
                 var newDirectoryPath = Path.Combine(rootPath, "EncryptedFiles");
                 var destPath = Path.Combine(newDirectoryPath, fileName);
                 encryptTasks[i] = EncryptFileAsync(fullFilePath, destPath, password);
-                EncryptedFiles.Add(fullFilePath);
             }
 
             return Task.WhenAll(encryptTasks);

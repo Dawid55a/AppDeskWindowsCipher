@@ -11,21 +11,12 @@ namespace CipherLibrary.Services.FileDecryptionService
 {
     public class FileDecryptionService : IFileDecryptionService
     {
-        private IEventLoggerService _eventLoggerService;
+        private readonly IEventLoggerService _eventLoggerService;
 
-        private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
-        private Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-        private readonly string _decryptedFilesPath;
-        private readonly string _encryptedFilesPath;
-        public List<string> DecryptedFiles = new List<string>();
 
         public FileDecryptionService(IEventLoggerService eventLoggerService)
         {
             _eventLoggerService = eventLoggerService;
-            if (_allAppSettings["WorkFolder"] == "") throw new ArgumentException("WorkFolder is empty");
-            var workDirectoryPath = _allAppSettings["WorkFolder"];
-            _encryptedFilesPath = Path.Combine(workDirectoryPath, "EncryptedFiles");
-            _decryptedFilesPath = Path.Combine(workDirectoryPath, "DecryptedFiles");
         }
 
         public async Task DecryptFileAsync(string sourceFile, string destFile, string password)
@@ -63,7 +54,8 @@ namespace CipherLibrary.Services.FileDecryptionService
                                 ICryptoTransform decryptor = aes.CreateDecryptor();
 
                                 // Create a decrypting stream
-                                using (var cryptoStream = new CryptoStream(sourceStream, decryptor, CryptoStreamMode.Read))
+                                using (var cryptoStream =
+                                       new CryptoStream(sourceStream, decryptor, CryptoStreamMode.Read))
                                 {
                                     // Copy the contents of the encrypted file to the decrypted file asynchronously
                                     await cryptoStream.CopyToAsync(destinationStream).ConfigureAwait(true);
@@ -76,11 +68,10 @@ namespace CipherLibrary.Services.FileDecryptionService
             catch (Exception e)
             {
                 _eventLoggerService.WriteError(e.Message);
-                Console.WriteLine(e);
                 throw;
             }
-            Console.WriteLine($"Decrypted file {sourceFile}");
-            _eventLoggerService.WriteInfo($"Decrypted file {sourceFile}");
+
+            _eventLoggerService.WriteDebug($"Decrypted file {sourceFile}");
             File.Delete(sourceFile);
         }
 
@@ -98,7 +89,6 @@ namespace CipherLibrary.Services.FileDecryptionService
                 var destPath = Path.Combine(newDirectoryPath, fileName);
 
                 await DecryptFileAsync(fullFilePath, destPath, password).ConfigureAwait(true);
-                DecryptedFiles.Add(fullFilePath);
             }
         }
 
@@ -118,11 +108,9 @@ namespace CipherLibrary.Services.FileDecryptionService
                 var destPath = Path.Combine(newDirectoryPath, fileName);
 
                 decryptTasks[i] = DecryptFileAsync(fullFilePath, destPath, password);
-                DecryptedFiles.Add(fullFilePath);
             }
 
             return Task.WhenAll(decryptTasks);
         }
-
     }
 }
