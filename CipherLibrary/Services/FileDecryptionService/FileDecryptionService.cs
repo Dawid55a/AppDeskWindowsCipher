@@ -88,27 +88,41 @@ namespace CipherLibrary.Services.FileDecryptionService
         {
             while (filesQueue.Count > 0)
             {
-                var file = filesQueue.Dequeue();
-                var sourceFile = Path.Combine(_encryptedFilesPath, file);
-                var destFile = Path.Combine(_decryptedFilesPath, file);
-                await DecryptFileAsync(sourceFile, destFile, password).ConfigureAwait(true);
-                DecryptedFiles.Add(file);
+                var fullFilePath = filesQueue.Dequeue();
+
+                var fileName = Path.GetFileName(fullFilePath);
+                var directoryPath = Path.GetDirectoryName(fullFilePath);
+                var rootPath = Directory.GetParent(directoryPath)?.FullName;
+
+                var newDirectoryPath = Path.Combine(rootPath, "DecryptedFiles");
+                var destPath = Path.Combine(newDirectoryPath, fileName);
+
+                await DecryptFileAsync(fullFilePath, destPath, password).ConfigureAwait(true);
+                DecryptedFiles.Add(fullFilePath);
             }
         }
 
         public Task DecryptFilesInParallelAsync(Queue<string> filesQueue, string password)
         {
             var size = filesQueue.Count;
-            var tasks = new Task[size];
+            var decryptTasks = new Task[size];
             for (var i = 0; i < size; i++)
             {
-                var file = filesQueue.Dequeue();
-                var sourceFile = Path.Combine(_encryptedFilesPath, file);
-                var destFile = Path.Combine(_decryptedFilesPath, file);
-                tasks[i] = DecryptFileAsync(sourceFile, destFile, password);
-                DecryptedFiles.Add(file);
+                var fullFilePath = filesQueue.Dequeue();
+
+                var fileName = Path.GetFileName(fullFilePath);
+                var directoryPath = Path.GetDirectoryName(fullFilePath);
+                var rootPath = Directory.GetParent(directoryPath)?.FullName;
+
+                var newDirectoryPath = Path.Combine(rootPath, "DecryptedFiles");
+                var destPath = Path.Combine(newDirectoryPath, fileName);
+
+                decryptTasks[i] = DecryptFileAsync(fullFilePath, destPath, password);
+                DecryptedFiles.Add(fullFilePath);
             }
-            return Task.WhenAll(tasks);
+
+            return Task.WhenAll(decryptTasks);
         }
+
     }
 }

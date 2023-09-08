@@ -186,11 +186,11 @@ namespace CipherLibrary.Services.FileCryptorService
                 // If size of file is above 100MB
                 if (info.Length >= 100 * 1024 * 1024)
                 {
-                    _bigFilesToEncrypt.Enqueue(fileEntry.Name);
+                    _bigFilesToEncrypt.Enqueue(fileEntry.Path);
                 }
                 else
                 {
-                    _smallFilesToEncrypt.Enqueue(fileEntry.Name);
+                    _smallFilesToEncrypt.Enqueue(fileEntry.Path);
                 }
             }
 
@@ -221,11 +221,11 @@ namespace CipherLibrary.Services.FileCryptorService
                 // If size of file is above 100MB
                 if (info.Length >= 100 * 1024 * 1024)
                 {
-                    _bigFilesToDecrypt.Enqueue(fileEntry.Name);
+                    _bigFilesToDecrypt.Enqueue(fileEntry.Path);
                 }
                 else
                 {
-                    _smallFilesToDecrypt.Enqueue(fileEntry.Name);
+                    _smallFilesToDecrypt.Enqueue(fileEntry.Path);
                 }
             }
 

@@ -7,6 +7,8 @@ using CipherLibrary.Services.EventLoggerService;
 using CipherLibrary.Services.FileWatcherService;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.Windows.Shapes;
+using Path = System.IO.Path;
 
 namespace CipherLibrary.Services.FileEncryptionService
 {
@@ -100,11 +102,16 @@ namespace CipherLibrary.Services.FileEncryptionService
         {
             while (filesQueue.Count > 0)
             {
-                var file = filesQueue.Dequeue();
-                var filePath = Path.Combine(_decryptedFilesPath, file);
-                var destPath = Path.Combine(_encryptedFilesPath, file);
-                await EncryptFileAsync(filePath, destPath, password).ConfigureAwait(true);
-                EncryptedFiles.Add(file);
+                var fullFilePath = filesQueue.Dequeue();
+
+                var fileName = Path.GetFileName(fullFilePath);
+                var directoryPath = Path.GetDirectoryName(fullFilePath);
+                var rootPath = Directory.GetParent(directoryPath)?.FullName;
+
+                var newDirectoryPath = Path.Combine(rootPath, "EncryptedFiles");
+                var destPath = Path.Combine(newDirectoryPath, fileName);
+                await EncryptFileAsync(fullFilePath, destPath, password).ConfigureAwait(true);
+                EncryptedFiles.Add(fullFilePath);
             }
         }
 
@@ -114,11 +121,16 @@ namespace CipherLibrary.Services.FileEncryptionService
             var encryptTasks = new Task[size];
             for (var i = 0; i < size; i++)
             {
-                var file = filesQueue.Dequeue();
-                var filePath = Path.Combine(_decryptedFilesPath, file);
-                var destPath = Path.Combine(_encryptedFilesPath, file);
-                encryptTasks[i] = EncryptFileAsync(filePath, destPath, password);
-                EncryptedFiles.Add(file);
+                var fullFilePath = filesQueue.Dequeue();
+
+                var fileName = Path.GetFileName(fullFilePath);
+                var directoryPath = Path.GetDirectoryName(fullFilePath);
+                var rootPath = Directory.GetParent(directoryPath)?.FullName;
+
+                var newDirectoryPath = Path.Combine(rootPath, "EncryptedFiles");
+                var destPath = Path.Combine(newDirectoryPath, fileName);
+                encryptTasks[i] = EncryptFileAsync(fullFilePath, destPath, password);
+                EncryptedFiles.Add(fullFilePath);
             }
 
             return Task.WhenAll(encryptTasks);
