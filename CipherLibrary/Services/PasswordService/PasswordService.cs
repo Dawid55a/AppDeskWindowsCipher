@@ -30,7 +30,6 @@ namespace CipherLibrary.Services.PasswordService
 
         public void SetPassword(byte[] password)
         {
-            Console.WriteLine(Encoding.Default.GetString(password));
             _allAppSettings[AppConfigKeys.EncryptedPassword] = Encoding.Default.GetString(password);
         }
 

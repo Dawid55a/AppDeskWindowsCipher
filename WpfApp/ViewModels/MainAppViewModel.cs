@@ -21,6 +21,7 @@ using System.Windows;
 using WpfApp.Views;
 using System.Windows.Threading;
 using CipherLibrary.DTOs;
+using Application = System.Windows.Application;
 
 namespace WpfApp.ViewModels
 {
@@ -54,6 +55,7 @@ namespace WpfApp.ViewModels
         private string _publicKey;
 
         private string _folderPath;
+
         public string FolderPath
         {
             get => _folderPath;
@@ -65,6 +67,7 @@ namespace WpfApp.ViewModels
         }
 
         private string _encryptionPassword;
+
         public string EncryptionPassword
         {
             get => _encryptionPassword;
@@ -76,6 +79,7 @@ namespace WpfApp.ViewModels
         }
 
         private IList _selectedDecryptedFiles;
+
         public IList SelectedDecryptedFiles
         {
             get => _selectedDecryptedFiles;
@@ -87,6 +91,7 @@ namespace WpfApp.ViewModels
         }
 
         private IList _selectedEncryptedFiles;
+
         public IList SelectedEncryptedFiles
         {
             get => _selectedEncryptedFiles;
@@ -133,6 +138,7 @@ namespace WpfApp.ViewModels
                 {
                     IsPopupOpen = false;
                 }
+
                 OnPropertyChanged(nameof(IsButtonChecked));
             }
         }
@@ -153,7 +159,8 @@ namespace WpfApp.ViewModels
         {
             _cipherService = cipherService;
             _eventLoggerService = eventLoggerService;
-            _eventLog = new EventLog(_allAppSettings[AppConfigKeys.LogName], Environment.MachineName, _allAppSettings[AppConfigKeys.SourceName]);
+            _eventLog = new EventLog(_allAppSettings[AppConfigKeys.LogName], Environment.MachineName,
+                _allAppSettings[AppConfigKeys.SourceName]);
 
             DecryptedFiles = new ObservableCollection<FileEntry>();
             EncryptedFiles = new ObservableCollection<FileEntry>();
@@ -165,7 +172,8 @@ namespace WpfApp.ViewModels
             SelectFolderCommand = new RelayCommand(SelectFolder);
             MoveToEncryptCommand = new RelayCommand(MoveToEncrypt);
             MoveToDecryptCommand = new RelayCommand(MoveToDecrypt);
-            StartEncryptionCommand = new RelayCommand(async obj => await StartEncryptionAndDecryptionAsync(obj).ConfigureAwait(true));
+            StartEncryptionCommand =
+                new RelayCommand(async obj => await StartEncryptionAndDecryptionAsync(obj).ConfigureAwait(true));
             SetLogLevelCommand = new RelayCommand(SetLogLevel);
             TogglePopupCommand = new RelayCommand(TogglePopup);
             OnLoadedCommand = new RelayCommand(OnLoaded);
@@ -207,16 +215,30 @@ namespace WpfApp.ViewModels
             {
                 Interval = TimeSpan.FromSeconds(5)
             };
-            _eventLogTimer.Tick += FetchEventLogEntries;
+            _eventLogTimer.Tick += (sender, e) => FetchEventLogEntriesAsync();
             _eventLogTimer.Start();
         }
-        private void FetchEventLogEntries(object sender, EventArgs e)
+
+        private async Task FetchEventLogEntriesAsync()
         {
-            _eventLog.Entries.Cast<EventLogEntry>().ToList().ForEach(x =>
+            var newEntries = new List<EventLogEntry>();
+
+            await Task.Run(() =>
             {
-                if (x.TimeGenerated <= _lastEventLogEntryTime) return;
-                LogEntries.Add(x);
-                _lastEventLogEntryTime = x.TimeGenerated;
+                newEntries.AddRange(_eventLog.Entries.Cast<EventLogEntry>()
+                    .Where(x => x.TimeGenerated > _lastEventLogEntryTime));
+
+                _lastEventLogEntryTime =
+                    newEntries.Any() ? newEntries.Max(x => x.TimeGenerated) : _lastEventLogEntryTime;
+            });
+
+            // Aktualizacja UI w głównym wątku
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                foreach (var entry in newEntries)
+                {
+                    LogEntries.Add(entry);
+                }
             });
         }
 
@@ -247,7 +269,7 @@ namespace WpfApp.ViewModels
                 _publicKey = _cipherService.GetPublicKey();
 
                 var passwordDialog = new PasswordDialog();
-            
+
                 // This will freeze the app until the dialog is closed
                 var res = passwordDialog.ShowDialog();
                 if (res == false)
@@ -257,20 +279,19 @@ namespace WpfApp.ViewModels
                     using (var rsaPublicOnly = new RSACryptoServiceProvider())
                     {
                         rsaPublicOnly.FromXmlString(_publicKey);
-                        encryptedPassword = rsaPublicOnly.Encrypt( Encoding.Default.GetBytes(EncryptionPassword), true);
+                        encryptedPassword = rsaPublicOnly.Encrypt(Encoding.Default.GetBytes(EncryptionPassword), true);
                     }
-                    _allAppSettings.Set(AppConfigKeys.EncryptedPassword, Encoding.Default.GetString(encryptedPassword,0,encryptedPassword.Length));
-                    _cipherService.SetPassword(encryptedPassword);
 
+                    _allAppSettings.Set(AppConfigKeys.EncryptedPassword,
+                        Encoding.Default.GetString(encryptedPassword, 0, encryptedPassword.Length));
+                    _cipherService.SetPassword(encryptedPassword);
                 }
 
                 _allAppSettings.Set(AppConfigKeys.FirstStartup, "NO");
                 _config.Save(ConfigurationSaveMode.Modified);
-
-
             }
 
-            
+
             foreach (var file in _cipherService.GetDecryptedFiles())
             {
                 DecryptedFiles.Add(file);
@@ -280,7 +301,6 @@ namespace WpfApp.ViewModels
             {
                 EncryptedFiles.Add(file);
             }
-
         }
 
         private void SelectFolder(object obj)
@@ -297,6 +317,7 @@ namespace WpfApp.ViewModels
                 //_allAppSettings.Set("WorkFolder", dialog.SelectedPath);
                 //workDirPath.Text = _allAppSettings.Get("WorkFolder");
             }
+
             _cipherService.ChangeOperationDirectory(FolderPath);
             _allAppSettings.Set(AppConfigKeys.WorkFolder, FolderPath);
             //_client.SetWorkingDirectory(_allAppSettings.Get("WorkFolder"));
@@ -323,6 +344,7 @@ namespace WpfApp.ViewModels
                     {
                         file.ToBeEncrypted = true;
                     }
+
                     EncryptedFiles.Add(file);
                 }
 
@@ -375,11 +397,11 @@ namespace WpfApp.ViewModels
                 using (var rsaPublicOnly = new RSACryptoServiceProvider())
                 {
                     rsaPublicOnly.FromXmlString(_publicKey);
-                    encryptedPassword = rsaPublicOnly.Encrypt( Encoding.Default.GetBytes(EncryptionPassword), true);
+                    encryptedPassword = rsaPublicOnly.Encrypt(Encoding.Default.GetBytes(EncryptionPassword), true);
                 }
 
                 _cipherService.CheckPassword(encryptedPassword);
-                
+
 
                 if (_cipherService.CheckPassword(encryptedPassword))
                 {
@@ -402,6 +424,7 @@ namespace WpfApp.ViewModels
                 RefreshData(null);
             }
         }
+
         private void SetLogLevel(object parameter)
         {
             LogLevel = parameter as string;
