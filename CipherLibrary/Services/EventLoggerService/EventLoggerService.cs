@@ -2,6 +2,7 @@
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Diagnostics;
+using CipherLibrary.DTOs;
 
 namespace CipherLibrary.Services.EventLoggerService
 {
@@ -11,12 +12,14 @@ namespace CipherLibrary.Services.EventLoggerService
         private TraceSwitch _traceSwitch;
 
         private static readonly NameValueCollection AllAppSettings = ConfigurationManager.AppSettings;
-        private readonly string _sourceName = AllAppSettings["SourceName"];
-        private readonly string _logName = AllAppSettings["LogName"];
+        private readonly string _sourceName;
+        private readonly string _logName;
 
 
         public EventLoggerService()
         {
+            _sourceName = "AppDKCipherSource";
+            _logName = "AppDKCipherLog";
             CreateLog();
             _traceSwitch = new TraceSwitch("MySwitch", "Description");
         }
@@ -32,6 +35,9 @@ namespace CipherLibrary.Services.EventLoggerService
                 Source = _sourceName,
                 Log = _logName
             };
+
+            _log.WriteEntry("Service is starting.", EventLogEntryType.Information);
+            _log.WriteEntry($"Key Directory {AllAppSettings[AppConfigKeys.SourceName]}.", EventLogEntryType.Information);
         }
 
         public void WriteDebug(string message)

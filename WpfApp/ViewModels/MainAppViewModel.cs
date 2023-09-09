@@ -22,16 +22,20 @@ using WpfApp.Views;
 using System.Windows.Threading;
 using CipherLibrary.DTOs;
 using Application = System.Windows.Application;
+using System.IO.IsolatedStorage;
+using System.IO;
+using CipherLibrary.Services.SecureConfigManager;
+using MessageBox = System.Windows.MessageBox;
 
 namespace WpfApp.ViewModels
 {
     public class MainAppViewModel : INotifyPropertyChanged
     {
         private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
-        private Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
         private readonly ICipherService _cipherService;
         private readonly IEventLoggerService _eventLoggerService;
+        private readonly ISecureConfigManager _secureConfig;
         private DispatcherTimer _eventLogTimer;
         private readonly EventLog _eventLog;
         private bool _cryptButtonEnabled;
@@ -155,11 +159,15 @@ namespace WpfApp.ViewModels
         }
 
 
-        public MainAppViewModel(ICipherService cipherService, IEventLoggerService eventLoggerService)
+        public MainAppViewModel(ICipherService cipherService, IEventLoggerService eventLoggerService, ISecureConfigManager secureConfig)
         {
             _cipherService = cipherService;
             _eventLoggerService = eventLoggerService;
-            _eventLog = new EventLog(_allAppSettings[AppConfigKeys.LogName], Environment.MachineName,
+            _secureConfig = secureConfig;
+
+            _eventLog = new EventLog(
+                _allAppSettings[AppConfigKeys.LogName], 
+                Environment.MachineName,
                 _allAppSettings[AppConfigKeys.SourceName]);
 
             DecryptedFiles = new ObservableCollection<FileEntry>();
@@ -181,20 +189,12 @@ namespace WpfApp.ViewModels
             ClearLogCommand = new RelayCommand(ClearLog);
 
             // Initialize working directory
-            _allAppSettings.Set(AppConfigKeys.WorkFolder, Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
-            _config.Save(ConfigurationSaveMode.Modified);
+            if (string.IsNullOrEmpty(_secureConfig.GetSetting(AppConfigKeys.WorkFolder)))
+            {
+                _secureConfig.SaveSetting(AppConfigKeys.WorkFolder, Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+            }
 
-            FolderPath = _allAppSettings.Get(AppConfigKeys.WorkFolder);
-
-
-            // EncryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File1.txt", Name = "File1.txt", IsEncrypted = true, IsDecrypted = false });
-            // EncryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File2.txt", Name = "File2.txt", IsEncrypted = true, IsDecrypted = false });
-            // EncryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File3.txt", Name = "File3.txt", IsEncrypted = true, IsDecrypted = false });
-
-            //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true});
-            //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true});
-            //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true });
-            //DecryptedFiles.Add(new FileEntry { Path = "C:\\Path\\To\\File4.txt", Name = "File4.txt", IsEncrypted = false, IsDecrypted = true });
+            FolderPath = _secureConfig.GetSetting(AppConfigKeys.WorkFolder);
 
             LogLevel = _eventLoggerService.GetTraceLevel().ToString();
 
@@ -230,7 +230,7 @@ namespace WpfApp.ViewModels
 
                 _lastEventLogEntryTime =
                     newEntries.Any() ? newEntries.Max(x => x.TimeGenerated) : _lastEventLogEntryTime;
-            });
+            }).ConfigureAwait(true);
 
             // Aktualizacja UI w głównym wątku
             Application.Current.Dispatcher.Invoke(() =>
@@ -263,10 +263,34 @@ namespace WpfApp.ViewModels
 
         private void OnLoaded(object obj)
         {
+            _eventLoggerService.WriteDebug($"First startup key {_secureConfig.GetSetting(AppConfigKeys.FirstStartup)}");
             // On first startup
-            if (_allAppSettings.Get(AppConfigKeys.FirstStartup) == "YES")
+            if (string.IsNullOrEmpty(_secureConfig.GetSetting(AppConfigKeys.FirstStartup)))
             {
-                _publicKey = _cipherService.GetPublicKey();
+
+                int retryCount = 0;
+                while (retryCount < 3)
+                {
+                    _publicKey = _cipherService.GetPublicKey();
+
+                    if (!string.IsNullOrEmpty(_publicKey))
+                    {
+                        break;  // Klucz został pomyślnie wczytany, wyjdź z pętli
+                    }
+
+                    // Zwiększ liczbę prób i poczekaj przed kolejnym podejściem
+                    retryCount++;
+                    Thread.Sleep(TimeSpan.FromSeconds(retryCount * 2));  // 2, 4, 6 sekund
+                }
+
+                if (string.IsNullOrEmpty(_publicKey))
+                {
+                    // Tutaj obsłuż błąd, na przykład wyświetl komunikat i zamknij aplikację
+                    _eventLoggerService.WriteError("Nie można wczytać klucza publicznego. Aplikacja zostanie zamknięta.");
+                    MessageBox.Show("Nie można wczytać klucza publicznego. Aplikacja zostanie zamknięta.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Environment.Exit(1);  // Zakończenie działania aplikacji z kodem błędu 1
+                    return;
+                }
 
                 var passwordDialog = new PasswordDialog();
 
@@ -278,18 +302,21 @@ namespace WpfApp.ViewModels
                     byte[] encryptedPassword;
                     using (var rsaPublicOnly = new RSACryptoServiceProvider())
                     {
+                        _eventLoggerService.WriteDebug($"Public key in password encrypting: {_publicKey}");
                         rsaPublicOnly.FromXmlString(_publicKey);
                         encryptedPassword = rsaPublicOnly.Encrypt(Encoding.Default.GetBytes(EncryptionPassword), true);
                     }
 
-                    _allAppSettings.Set(AppConfigKeys.EncryptedPassword,
+                    _secureConfig.SaveSetting(AppConfigKeys.EncryptedPassword,
                         Encoding.Default.GetString(encryptedPassword, 0, encryptedPassword.Length));
                     _cipherService.SetPassword(encryptedPassword);
                 }
 
-                _allAppSettings.Set(AppConfigKeys.FirstStartup, "NO");
-                _config.Save(ConfigurationSaveMode.Modified);
+                _secureConfig.SaveSetting(AppConfigKeys.FirstStartup, "NO");
+                _eventLoggerService.WriteDebug($"First startup key {_secureConfig.GetSetting(AppConfigKeys.FirstStartup)}");
+
             }
+
 
 
             foreach (var file in _cipherService.GetDecryptedFiles())
@@ -301,6 +328,12 @@ namespace WpfApp.ViewModels
             {
                 EncryptedFiles.Add(file);
             }
+
+            if (string.IsNullOrEmpty(_secureConfig.GetSetting(AppConfigKeys.PublicKey)))
+            {
+                _publicKey = _cipherService.GetPublicKey();
+            }
+
         }
 
         private void SelectFolder(object obj)
@@ -314,14 +347,10 @@ namespace WpfApp.ViewModels
             if (res == DialogResult.OK)
             {
                 FolderPath = dialog.SelectedPath;
-                //_allAppSettings.Set("WorkFolder", dialog.SelectedPath);
-                //workDirPath.Text = _allAppSettings.Get("WorkFolder");
             }
 
             _cipherService.ChangeOperationDirectory(FolderPath);
-            _allAppSettings.Set(AppConfigKeys.WorkFolder, FolderPath);
-            //_client.SetWorkingDirectory(_allAppSettings.Get("WorkFolder"));
-            //_config.Save(ConfigurationSaveMode.Modified);
+            _secureConfig.SaveSetting(AppConfigKeys.WorkFolder, FolderPath);
             RefreshData(null);
         }
 
@@ -398,6 +427,7 @@ namespace WpfApp.ViewModels
                 {
                     rsaPublicOnly.FromXmlString(_publicKey);
                     encryptedPassword = rsaPublicOnly.Encrypt(Encoding.Default.GetBytes(EncryptionPassword), true);
+                    _eventLoggerService.WriteWarning($"Korzystasz z hasła {EncryptionPassword}");
                 }
 
                 _cipherService.CheckPassword(encryptedPassword);
@@ -414,8 +444,13 @@ namespace WpfApp.ViewModels
                 else
                 {
                     _eventLoggerService.WriteError("Wpisano nieprawidłowe hasło!");
-                    throw new Exception("Hasło jest nie prawidłowe");
+                    MessageBox.Show("Hasło jest nieprawidłowe", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+            catch(Exception e)
+            {
+                _eventLoggerService.WriteError(e.Message);
+                return;
             }
             finally
             {

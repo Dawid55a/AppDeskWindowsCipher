@@ -12,6 +12,7 @@ using CipherLibrary.Services.FileDecryptionService;
 using CipherLibrary.Services.FileEncryptionService;
 using CipherLibrary.Services.FileListeningService;
 using CipherLibrary.Services.PasswordService;
+using CipherLibrary.Services.SecureConfigManager;
 using CipherLibrary.Wcf.Contracts;
 
 namespace CipherLibrary.Services.FileCryptorService
@@ -23,10 +24,8 @@ namespace CipherLibrary.Services.FileCryptorService
         private readonly IFileListeningService _fileEncryptListeningService;
         private readonly IFileListeningService _fileDecryptListeningService;
         private readonly IPasswordService _passwordService;
+        private readonly ISecureConfigManager _secureConfig;
         private readonly IEventLoggerService _eventLoggerService;
-
-        private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
-        private readonly Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
         private readonly Queue<string> _bigFilesToEncrypt = new Queue<string>();
         private readonly Queue<string> _bigFilesToDecrypt = new Queue<string>();
@@ -42,7 +41,8 @@ namespace CipherLibrary.Services.FileCryptorService
             IEventLoggerService eventLoggerService,
             IFileListeningService fileEncryptListeningService,
             IFileListeningService fileDecryptListeningService,
-            IPasswordService passwordService
+            IPasswordService passwordService,
+            ISecureConfigManager secureConfig
         )
         {
             _fileEncryptionService = fileEncryptionService;
@@ -51,9 +51,10 @@ namespace CipherLibrary.Services.FileCryptorService
             _fileEncryptListeningService = fileEncryptListeningService;
             _fileDecryptListeningService = fileDecryptListeningService;
             _passwordService = passwordService;
+            _secureConfig = secureConfig;
 
-            _encryptedFilesPath = _allAppSettings[AppConfigKeys.WorkFolder] + "\\EncryptedFiles";
-            _decryptedFilesPath = _allAppSettings[AppConfigKeys.WorkFolder] + "\\DecryptedFiles";
+            _encryptedFilesPath = _secureConfig.GetSetting(AppConfigKeys.WorkFolder) + "\\EncryptedFiles";
+            _decryptedFilesPath = _secureConfig.GetSetting(AppConfigKeys.WorkFolder) + "\\DecryptedFiles";
 
             Setup();
         }
@@ -63,25 +64,26 @@ namespace CipherLibrary.Services.FileCryptorService
             _eventLoggerService.WriteInfo("FileCryptorService setup");
             Console.WriteLine("FileCryptorService setup");
 
-            if (string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.PublicKey]) ||
-                string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.PrivateKey]))
+            if (string.IsNullOrEmpty(_secureConfig.GetSetting(AppConfigKeys.PublicKey)) ||
+                string.IsNullOrEmpty(_secureConfig.GetSetting(AppConfigKeys.PrivateKey)))
             {
                 // Create encryption key
                 Console.WriteLine("Start creating key");
                 using (var rsa = new RSACryptoServiceProvider(4096))
                 {
-                    _allAppSettings.Set(AppConfigKeys.PublicKey, rsa.ToXmlString(false));
-                    _allAppSettings.Set(AppConfigKeys.PrivateKey, rsa.ToXmlString(true));
+                    _secureConfig.SaveSetting(AppConfigKeys.PublicKey, rsa.ToXmlString(false));
+                    _secureConfig.SaveSetting(AppConfigKeys.PrivateKey, rsa.ToXmlString(true));
                 }
-                Console.WriteLine("End creating key");
 
-                _config.Save(ConfigurationSaveMode.Modified);
+                Console.WriteLine("End creating key");
+                _eventLoggerService.WriteDebug($"Klucz publiczny {_secureConfig.GetSetting(AppConfigKeys.PublicKey)}");
+                _eventLoggerService.WriteDebug($"Klucz prywatny {_secureConfig.GetSetting(AppConfigKeys.PrivateKey)}");
             }
 
-            if (string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.WorkFolder]))
+            if (string.IsNullOrEmpty(_secureConfig.GetSetting(AppConfigKeys.WorkFolder)))
             {
-                _allAppSettings.Set(AppConfigKeys.WorkFolder, Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
-                _config.Save(ConfigurationSaveMode.Modified);
+                _secureConfig.SaveSetting(AppConfigKeys.WorkFolder,
+                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
             }
 
             // Create folders if not exist
@@ -99,12 +101,12 @@ namespace CipherLibrary.Services.FileCryptorService
             _fileDecryptListeningService.StartListenOnFolder(_decryptedFilesPath);
         }
 
+
         public void SetWorkingDirectory(string workingDirectory)
         {
-            _allAppSettings.Set(AppConfigKeys.WorkFolder, workingDirectory);
+            _secureConfig.SaveSetting(AppConfigKeys.WorkFolder, workingDirectory);
             _encryptedFilesPath = workingDirectory + "\\EncryptedFiles";
             _decryptedFilesPath = workingDirectory + "\\DecryptedFiles";
-            _config.Save(ConfigurationSaveMode.Modified);
 
             if (!Directory.Exists(_encryptedFilesPath))
             {
@@ -141,7 +143,8 @@ namespace CipherLibrary.Services.FileCryptorService
 
         public string GetPublicKey()
         {
-            return _allAppSettings.Get(AppConfigKeys.PublicKey);
+            var string2 = _secureConfig.GetSetting(AppConfigKeys.PublicKey);
+            return string2;
         }
 
         public List<FileEntry> GetDecryptedFiles()

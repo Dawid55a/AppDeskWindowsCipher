@@ -7,35 +7,35 @@ using System.Security.Cryptography;
 using System.Text;
 using CipherLibrary.DTOs;
 using CipherLibrary.Services.EventLoggerService;
+using CipherLibrary.Services.SecureConfigManager;
 
 namespace CipherLibrary.Services.PasswordService
 {
     public class PasswordService : IPasswordService
     {
-        private readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
-        private readonly Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-
         private readonly IEventLoggerService _eventLoggerService;
+        private readonly ISecureConfigManager _configManager;
 
-        public PasswordService(IEventLoggerService eventLoggerService)
+        public PasswordService(IEventLoggerService eventLoggerService, ISecureConfigManager configManager)
         {
             _eventLoggerService = eventLoggerService;
+            _configManager = configManager;
         }
 
         public void SetPassword(string password)
         {
-            _allAppSettings[AppConfigKeys.EncryptedPassword] = password;
+            _configManager.SaveSetting(AppConfigKeys.EncryptedPassword, password);
         }
 
         public void SetPassword(byte[] password)
         {
-            _allAppSettings[AppConfigKeys.EncryptedPassword] = Encoding.Default.GetString(password);
+            _configManager.SaveSetting(AppConfigKeys.EncryptedPassword, Encoding.Default.GetString(password));
         }
 
         public string GetPassword()
         {
-            return DecryptPassword(Encoding.Default.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
+            return DecryptPassword(
+                Encoding.Default.GetBytes(_configManager.GetSetting(AppConfigKeys.EncryptedPassword)));
         }
 
 
@@ -44,7 +44,7 @@ namespace CipherLibrary.Services.PasswordService
             byte[] decryptedPassword;
             using (var rsaPublicOnly = new RSACryptoServiceProvider())
             {
-                rsaPublicOnly.FromXmlString(_allAppSettings[AppConfigKeys.PrivateKey]);
+                rsaPublicOnly.FromXmlString(_configManager.GetSetting(AppConfigKeys.PrivateKey));
                 decryptedPassword = rsaPublicOnly.Decrypt(password, true);
             }
 
@@ -53,7 +53,7 @@ namespace CipherLibrary.Services.PasswordService
 
         public bool IsPasswordSet()
         {
-            return string.IsNullOrEmpty(_allAppSettings[AppConfigKeys.EncryptedPassword]);
+            return string.IsNullOrEmpty(_configManager.GetSetting(AppConfigKeys.EncryptedPassword));
         }
 
         public bool IsPasswordCorrect(string password)
@@ -63,7 +63,7 @@ namespace CipherLibrary.Services.PasswordService
 
             var passedPassword = DecryptPassword(Encoding.Default.GetBytes(password));
             var savedPassword =
-                DecryptPassword(Encoding.Default.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
+                DecryptPassword(Encoding.Default.GetBytes(_configManager.GetSetting(AppConfigKeys.EncryptedPassword)));
 
             return string.Equals(passedPassword, savedPassword);
         }
@@ -75,7 +75,7 @@ namespace CipherLibrary.Services.PasswordService
 
             var passedPassword = DecryptPassword(password);
             var savedPassword =
-                DecryptPassword(Encoding.Default.GetBytes(_allAppSettings[AppConfigKeys.EncryptedPassword]));
+                DecryptPassword(Encoding.Default.GetBytes(_configManager.GetSetting(AppConfigKeys.EncryptedPassword)));
 
             return string.Equals(passedPassword, savedPassword);
         }

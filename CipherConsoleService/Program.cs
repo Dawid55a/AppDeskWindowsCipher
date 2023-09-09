@@ -9,12 +9,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Integration.Wcf;
+using CipherLibrary.DTOs;
 using CipherLibrary.Services.EventLoggerService;
 using CipherLibrary.Services.FileCryptorService;
 using CipherLibrary.Services.FileDecryptionService;
 using CipherLibrary.Services.FileEncryptionService;
 using CipherLibrary.Services.FileListeningService;
 using CipherLibrary.Services.PasswordService;
+using CipherLibrary.Services.SecureConfigManager;
 using CipherLibrary.Wcf.Contracts;
 
 namespace CipherConsoleService
@@ -23,17 +25,9 @@ namespace CipherConsoleService
     {
         private static IContainer Container { get; set; }
         private static ServiceHost _serviceHost;
-        private static readonly NameValueCollection _allAppSettings = ConfigurationManager.AppSettings;
-        private static Configuration _config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+        private static ISecureConfigManager _config;
         public static void Main(string[] args)
         {
-
-            if (_allAppSettings["WorkFolder"] == "")
-            {
-                _allAppSettings.Set("WorkFolder", Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
-                _config.Save(ConfigurationSaveMode.Modified);
-            }
-
             var builder = new ContainerBuilder();
             builder.RegisterType<EventLoggerService>().As<IEventLoggerService>().SingleInstance();
             builder.RegisterType<FileCryptorService>().As<IFileCryptorService>().SingleInstance();
@@ -42,33 +36,20 @@ namespace CipherConsoleService
             builder.RegisterType<FileListeningService>().As<IFileListeningService>();
             builder.RegisterType<PasswordService>().As<IPasswordService>();
             builder.RegisterType<CipherService>().As<ICipherService>();
+            builder.RegisterType<SecureConfigManager>().As<ISecureConfigManager>();
 
             Container = builder.Build();
 
+            _config = Container.Resolve<ISecureConfigManager>();
+            if (string.IsNullOrEmpty(_config.GetSetting(AppConfigKeys.WorkFolder)))
+            {
+                _config.SaveSetting(AppConfigKeys.WorkFolder, Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+            }
 
-            var binding = new BasicHttpBinding();
+            var binding = new NetTcpBinding();
 
-            _serviceHost = new ServiceHost(typeof(CipherService), new Uri("http://localhost:8000"));
+            _serviceHost = new ServiceHost(typeof(CipherService), new Uri("net.tcp://localhost:8001"));
             _serviceHost.AddServiceEndpoint(typeof(ICipherService), binding, "FileCipher");
-
-
-            var smb = _serviceHost.Description.Behaviors.Find<ServiceMetadataBehavior>();
-            if (smb == null)
-            {
-                smb = new ServiceMetadataBehavior
-                {
-                    HttpGetEnabled = true
-                };
-                _serviceHost.Description.Behaviors.Add(smb);
-            }
-            else
-            {
-                if (!smb.HttpGetEnabled)
-                {
-                    smb.HttpGetEnabled = true;
-                }
-            }
-
 
             var debug = _serviceHost.Description.Behaviors.Find<ServiceDebugBehavior>();
             if (debug == null)
@@ -86,14 +67,12 @@ namespace CipherConsoleService
 
             _serviceHost.AddDependencyInjectionBehavior<ICipherService>(Container);
 
-
             _serviceHost.Opened += HostOnOpened;
             _serviceHost.Open();
 
             Console.ReadLine();
             _serviceHost.Close();
         }
-
 
         private static void HostOnOpened(object sender, EventArgs e)
         {

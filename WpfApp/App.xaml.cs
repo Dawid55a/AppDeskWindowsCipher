@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Autofac.Integration.Wcf;
 using CipherLibrary.Services.EventLoggerService;
+using CipherLibrary.Services.SecureConfigManager;
 using WpfApp.ViewModels;
 
 namespace WpfApp
@@ -29,8 +30,8 @@ namespace WpfApp
 
             // builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
             builder.Register(c => new ChannelFactory<ICipherService>(
-                    new BasicHttpBinding(),
-                    new EndpointAddress("http://localhost:8000/FileCipher")))
+                    new NetTcpBinding(),
+                    new EndpointAddress("net.tcp://localhost:8001/FileCipher")))
                 .SingleInstance();
 
             builder.Register(c => c.Resolve<ChannelFactory<ICipherService>>().CreateChannel())
@@ -41,6 +42,7 @@ namespace WpfApp
 
             builder.RegisterType<MainAppViewModel>().AsSelf().SingleInstance();
             builder.RegisterType<EventLoggerService>().As<IEventLoggerService>();
+            builder.RegisterType<SecureConfigManager>().As<ISecureConfigManager>();
 
             // Resolve MainWindow and set its DataContext to the MainViewModel
             builder.RegisterType<MainWindow>().OnActivated(w =>
