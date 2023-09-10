@@ -34,7 +34,7 @@ namespace CipherLibrary.Wcf.Contracts
 
         public void EncryptFiles(List<FileEntry> fileEntry, byte[] password)
         {
-            _fileCryptorService.EncryptFiles(fileEntry, password);
+            _fileCryptorService.EncryptFilesAsync(fileEntry, password);
             _eventLoggerService.WriteDebug("Zaszyfrowano pliki");
         }
 

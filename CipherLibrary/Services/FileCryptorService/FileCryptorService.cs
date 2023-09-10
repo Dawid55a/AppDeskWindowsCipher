@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
 using CipherLibrary.DTOs;
 using CipherLibrary.Services.EventLoggerService;
 using CipherLibrary.Services.FileDecryptionService;
@@ -168,7 +170,7 @@ namespace CipherLibrary.Services.FileCryptorService
             return fileEntries;
         }
 
-        public void EncryptFiles(List<FileEntry> fileEntries, byte[] password)
+        public Task EncryptFilesAsync(List<FileEntry> fileEntries, byte[] password)
         {
             foreach (var fileEntry in fileEntries)
             {
@@ -198,8 +200,12 @@ namespace CipherLibrary.Services.FileCryptorService
 
             var plainPassword = _passwordService.DecryptPassword(password);
 
-            _fileEncryptionService.EncryptFilesInQueueAsync(_smallFilesToEncrypt, plainPassword);
-            _fileEncryptionService.EncryptFilesInParallelAsync(_bigFilesToEncrypt, plainPassword);
+            var tasks = new Task[2];
+
+            tasks[0] = _fileEncryptionService.EncryptFilesInQueueAsync(_smallFilesToEncrypt, plainPassword);
+            tasks[1] = _fileEncryptionService.EncryptFilesInParallelAsync(_bigFilesToEncrypt, plainPassword);
+
+            return Task.WhenAll(tasks);
         }
 
         public void DecryptFiles(List<FileEntry> fileEntries, byte[] password)

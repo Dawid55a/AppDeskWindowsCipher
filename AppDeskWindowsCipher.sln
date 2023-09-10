@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CipherConsoleService", "Cip
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WpfApp", "WpfApp\WpfApp.csproj", "{C4FDA200-D534-4319-8A8F-8D4434A1BE12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestProject", "UnitTestProject\UnitTestProject.csproj", "{89BA0692-1CE9-4E25-959D-CF4F2A840BB5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +39,10 @@ Global
 		{C4FDA200-D534-4319-8A8F-8D4434A1BE12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C4FDA200-D534-4319-8A8F-8D4434A1BE12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C4FDA200-D534-4319-8A8F-8D4434A1BE12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89BA0692-1CE9-4E25-959D-CF4F2A840BB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89BA0692-1CE9-4E25-959D-CF4F2A840BB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89BA0692-1CE9-4E25-959D-CF4F2A840BB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89BA0692-1CE9-4E25-959D-CF4F2A840BB5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

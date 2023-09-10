@@ -24,13 +24,13 @@ namespace CipherLibrary.Services.EventLoggerService
             _traceSwitch = new TraceSwitch("MySwitch", "Description");
         }
         
-        public void CreateLog()
+        public void CreateLog(EventLog log=null)
         {
             if (!EventLog.SourceExists(_sourceName))
             {
                 EventLog.CreateEventSource(_sourceName, _logName);
             }
-            _log = new EventLog
+            _log = log ?? new EventLog
             {
                 Source = _sourceName,
                 Log = _logName

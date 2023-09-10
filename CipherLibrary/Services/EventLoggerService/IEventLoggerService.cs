@@ -4,7 +4,7 @@ namespace CipherLibrary.Services.EventLoggerService
 {
     public interface IEventLoggerService
     {
-        void CreateLog();
+        void CreateLog(EventLog log = null);
         void WriteDebug(string message);
         void WriteInfo(string message);
         void WriteError(string message);
